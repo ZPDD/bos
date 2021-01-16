@@ -9,4 +9,4 @@ BOS is an stripped down OS (and platform) to allow a developers to create applic
 What BOS is not:
 It is not a general purpose OS. It is not meant for people to read emails, browse the Internet, create documents, create presentations, etc. There are other OS' that do this and do this very well. 
 
-BOS is meant to be the base platform for a product. BOS would be a great solution for Internet of Things (IoT) as many of those products are meant to develiver very specific tasks.
+BOS is meant to be the base platform for a product. BOS would be a great solution for Internet of Things (IoT) as many of those products are meant to develiver very specific tasks. Any solution that is meant to deliver specifics results, BOS would be the platform to use.
