@@ -1,20 +1,18 @@
 # BOS System Calls
 
-Version: 1
-
-Created: Feb 21, 2021
-
-Copyright: (c) 2021-2022, Zero Point Design and Development Inc.
+Version: 1. 
+Created: Feb 21, 2021. 
+Copyright: (c) 2021-2022, Zero Point Design and Development Inc.  
 
 
 
 ## Background 
 BOS uses one system call (i.e. interrupt call) for all user functions; 0xFF (e.g. int 0xff). The sections below gives a brief description of the intent of the system function and required parameters. Each system function is identified using register RDX.
 
-The system functions described below use the following format:
-Description of function
-Parameters:	<registers used to call the function. Note, RDX is always required>
-Returns:	<return values and which registers the values are returned to>
+The system functions described below use the following format:\
+Description of function\
+Parameters:	<registers used to call the function. Note, RDX is always required>\
+Returns:	<return values and which registers the values are returned to>\
 
 INT 0xFF
 Parameters:	RDX = function number
@@ -31,6 +29,7 @@ Returns:	n/a
 Return CPU ticker counter
 Parameters:	RDX = 0x1
 Returns:	RAX = current ticker counter
+
 Become active STDIN process for the keyboard
 Used for taking keyboard control
 Parameters:	RDX = 0x3
@@ -520,6 +519,11 @@ Parameters:	RDX = 0x223
 		RAX = start of virtual memory location
 		RCX = number of bytes to release
 Returns:	n/a
+
+
+
+
+
 
 
 
