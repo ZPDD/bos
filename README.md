@@ -20,3 +20,6 @@ BOS is meant to be the base platform for a product or project. BOS would be a gr
 - All resources are at the developers disposal.
 
 The intent is to allow people to try out the OS and create new applications. Provide constructive feedback that will be used to improve the OS.
+
+Send all questions and inquiries to zpdd.inc@gmail.com
+
