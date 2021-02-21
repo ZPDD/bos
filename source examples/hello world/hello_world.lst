@@ -1,0 +1,1879 @@
+     1                                  ;******************************************************************************
+     2                                  ; HELLO WORLD
+     3                                  ;
+     4                                  ;   In keeping with programming tradition, this is the classic Hello World
+     5                                  ;   program.
+     6                                  ;******************************************************************************
+     7                                  
+     8                                  org 0x70000000              ; all user programs must originate at this address
+     9                                  bits 64                     ; must use 64 bit directive
+    10 00000000 E9B6090000              jmp ENTRY                   ; jump to actual code, the name can be any name you like
+    11                                  
+    12                                  ;***********************************
+    13                                  ;   PROGRAM DATA
+    14                                  ;***********************************
+    15 00000005 48656C6C6F20576F72-     msg         db 'Hello World!',0 ; a NULL terminated string to print
+    15 0000000E 6C642100           
+    16                                  
+    17                                  ;***********************************
+    18                                  ;   INCLUDE ADDITIONAL FILES
+    19                                  ;***********************************
+    20                                  ; This is a library file that has many common functions (e.g. clear, print, etc).
+    21                                  ; Instead of doing raw INT system calls, this library is a wrapper for them
+    22                                  ; and uses easy to remember names instead of numbers.
+    23                                  %include "lib_app.asm"
+    24                              <1> ;*******************************************************************************
+    25                              <1> ;	LIBRARY - FOR APPLICATIONS
+    26                              <1> ;
+    27                              <1> ; A library file with common routines that would be used in applications.
+    28                              <1> ;
+    29                              <1> ; Copyright (c) 2016-2020, David Borsato
+    30                              <1> ; Created: Nov 7, 2018 by David Borsato
+    31                              <1> ;*******************************************************************************
+    32                              <1> 
+    33                              <1> FONT1.FULL.BLOCK 	equ 9608
+    34                              <1> TCP_SIG_HDR_Size	equ 32
+    35                              <1> 
+    36                              <1> ;;
+    37                              <1> ;; GLOBAL VARIABLES
+    38                              <1> ;;
+    39 00000012 0010000000000000    <1> PAGE_SZ 		dq 0x1000 		; system page size (4K)
+    40                              <1> 
+    41                              <1> ; GUI
+    42 0000001A 0000                <1> BPP 			dw 0			; bits per pixel
+    43 0000001C 0000                <1> BytesPP			dw 0			; bytes per pixel
+    44 0000001E 0200                <1> CH_NUM 			dw 2			;
+    45 00000020 00                  <1> GUI				db 0			; GUI mode of system
+    46 00000021 0000                <1> GUI_X 			dw 0			; X res
+    47 00000023 0000                <1> GUI_Y 			dw 0 			; Y res
+    48 00000025 0000                <1> GUI_CH_W		dw 0			; char width
+    49 00000027 0000                <1> GUI_CH_H		dw 0			; char height
+    50 00000029 0000                <1> LINE_NO 		dw 0			; tracks what line number to print on
+    51 0000002B 1500                <1> LINE_MAX_TXT	dw 21			; maximum lines in text mode (21 default)
+    52 0000002D 1500                <1> LINE_MAX_GUI	dw 21			; maximum lines in gui mode (21 default)
+    53 0000002F 0000                <1> YPITCH 			dw 0
+    54 00000031 0000000000000000    <1> VID_ADDR		dq 0			; base video memory address
+    55                              <1> 
+    56                              <1> ; Network config
+    57 00000039 0000000000000000    <1> CID 			dq 0			; connection ID
+    58 00000041 0000                <1> PORT 			dw 0
+    59 00000043 0000000000000000    <1> RCV_BUFF		dq 0			; memory receive buffer
+    60 0000004B 00000000            <1> RCV_BUFF_SZ		dd 0 			; size of receive buffer (1,040,675)
+    61 0000004F 00000000            <1> RCV_BUFF_PTR	dd 0			; memory pointer into RCV_BUFF
+    62                              <1> 
+    63                              <1> 
+    64                              <1> ;*******************************************************************************
+    65                              <1> ;*                        E R R O R   H A N D L I N G
+    66                              <1> ;*******************************************************************************
+    67 00000053 4552524F523A20436F- <1> msgErrOpen			db 'ERROR: Could not open network port.',0
+    67 0000005C 756C64206E6F74206F- <1>
+    67 00000065 70656E206E6574776F- <1>
+    67 0000006E 726B20706F72742E00  <1>
+    68 00000077 4552524F523A204E6F- <1> msgNoMem			db 'ERROR: Not enough memory!',0
+    68 00000080 7420656E6F75676820- <1>
+    68 00000089 6D656D6F72792100    <1>
+    69 00000091 4552524F523A204E6F- <1> msgNoMemNet			db 'ERROR: Not enough memory for send and receive buffers!',0
+    69 0000009A 7420656E6F75676820- <1>
+    69 000000A3 6D656D6F727920666F- <1>
+    69 000000AC 722073656E6420616E- <1>
+    69 000000B5 642072656365697665- <1>
+    69 000000BE 206275666665727321- <1>
+    69 000000C7 00                  <1>
+    70                              <1> 
+    71                              <1> Error_no_memory_network:
+    72 000000C8 48BE-               <1> 	mov rsi,msgNoMemNet
+    72 000000CA [9100000000000000]  <1>
+    73 000000D2 EB18                <1> 	jmp Error_handler
+    74                              <1> 
+    75                              <1> Error_no_memory:
+    76 000000D4 48BE-               <1> 	mov rsi,msgNoMem
+    76 000000D6 [7700000000000000]  <1>
+    77 000000DE EB0C                <1> 	jmp Error_handler
+    78                              <1> 
+    79                              <1> Error_open_port:
+    80 000000E0 48BE-               <1> 	mov rsi,msgErrOpen
+    80 000000E2 [5300000000000000]  <1>
+    81 000000EA EB00                <1> 	jmp Error_handler
+    82                              <1> 
+    83                              <1> 
+    84                              <1> ; IN:	RSI = Error message
+    85                              <1> Error_handler:
+    86 000000EC 6631C0              <1> 	xor ax,ax 				; to X to 0
+    87 000000EF 66FF0425[29000000]  <1> 	inc word [LINE_NO]
+    88 000000F7 E87E040000          <1> 	call print_ln
+    89                              <1> 
+    90                              <1> Exit:
+    91 000000FC BA00000000          <1> 	mov rdx,0x0				; stop process
+    92 00000101 CDFF                <1> 	int 0xFF
+    93                              <1> 
+    94                              <1> 
+    95                              <1> ;*******************************************************************************
+    96                              <1> ;*                          P R O C E D U R E S
+    97                              <1> ;*******************************************************************************
+    98                              <1> 
+    99                              <1> ;*******************************************************************************
+   100                              <1> ; Allocates memory from system.
+   101                              <1> ; IN:	RAX:	memory size, in bytes, to allocate
+   102                              <1> ; OUT:	 BL:	return code; 0=success, anything else is an error
+   103                              <1> ;		RAX:	memory address of memory allocated
+   104                              <1> ;*******************************************************************************
+   105                              <1> alloc:
+   106 00000103 52                  <1> 	push rdx
+   107 00000104 BA21020000          <1> 	mov rdx,0x221
+   108 00000109 CDFF                <1> 	int 0xFF
+   109 0000010B 5A                  <1> 	pop rdx
+   110 0000010C 80FB00              <1> 	cmp bl,0
+   111 0000010F 75B7                <1> 	jnz Error_no_memory_network
+   112 00000111 C3                  <1> ret
+   113                              <1> 
+   114                              <1> clrscr:
+   115                              <1> clr_scr:
+   116                              <1> clear_screen:
+   117 00000112 52                  <1> 	push rdx
+   118 00000113 66C70425[29000000]- <1> 	mov word [LINE_NO],0x0		; reset line number
+   118 0000011B 0000                <1>
+   119                              <1> 
+   120 0000011D 803C25[20000000]00  <1> 	cmp byte [GUI],0
+   121 00000125 7509                <1> 	jnz .Clear_gui
+   122                              <1> 
+   123 00000127 BA00030000          <1> 	mov rdx,0x300
+   124 0000012C CDFF                <1> 	int 0xFF
+   125                              <1> 
+   126 0000012E EB44                <1> 	jmp .Done
+   127                              <1> 
+   128                              <1> .Clear_gui:
+   129 00000130 51                  <1> 	push rcx
+   130 00000131 52                  <1> 	push rdx
+   131 00000132 4150                <1> 	push r8
+   132 00000134 4151                <1> 	push r9
+   133 00000136 4152                <1> 	push r10
+   134 00000138 4153                <1> 	push r11
+   135                              <1> 
+   136 0000013A 4D31D2              <1> 	xor r10,r10
+   137 0000013D 4D31DB              <1> 	xor r11,r11
+   138                              <1> 
+   139                              <1> 	; Clear screen
+   140                              <1> 	; IN:	 R8 = starting X (left)
+   141                              <1> 	;		 R9 = starting Y (top)
+   142                              <1> 	;		R10 = width
+   143                              <1> 	;		R11 = height
+   144                              <1> 	;		ECX = color
+   145                              <1> 	; 		RDX = 0x126
+   146 00000140 41B800000000        <1> 	mov r8,0
+   147 00000146 41B900000000        <1> 	mov r9,0
+   148 0000014C 66448B1425-         <1> 	mov r10w,[GUI_X]
+   148 00000151 [21000000]          <1>
+   149 00000155 66448B1C25-         <1> 	mov r11w,[GUI_Y]
+   149 0000015A [23000000]          <1>
+   150 0000015E B900000000          <1> 	mov ecx, 0x0				; black
+   151 00000163 BA26010000          <1> 	mov rdx, 0x126				; draw full box
+   152 00000168 CDFF                <1> 	int 0xFF
+   153                              <1> 
+   154 0000016A 415B                <1> 	pop r11
+   155 0000016C 415A                <1> 	pop r10
+   156 0000016E 4159                <1> 	pop r9
+   157 00000170 4158                <1> 	pop r8
+   158 00000172 5A                  <1> 	pop rdx
+   159 00000173 59                  <1> 	pop rcx
+   160                              <1> 
+   161                              <1> .Done:
+   162 00000174 5A                  <1> 	pop rdx
+   163 00000175 C3                  <1> ret
+   164                              <1> 
+   165                              <1> 
+   166                              <1> ;******************************************************************************
+   167                              <1> ; Clears one character on the screen. NOTE: This only works in GUI mode.
+   168                              <1> ; IN:	AL = X
+   169                              <1> ;		AH = Y
+   170                              <1> ;******************************************************************************
+   171                              <1> clear_screen_ch:
+   172 00000176 803C25[20000000]00  <1> cmp byte [GUI],0
+   173 0000017E 740E                <1> jz .Return
+   174                              <1> 
+   175                              <1> ;;
+   176                              <1> ;; NOTE: rework this routine to use CH_W & CH_H instead, then draw a small box.
+   177                              <1> ;;
+   178 00000180 52                  <1> 	push rdx
+   179 00000181 B900000000          <1> 	mov ecx,0x000000 		; black
+   180 00000186 BA02040000          <1> 	mov rdx,0x402
+   181 0000018B CDFF                <1> 	int 0xFF
+   182 0000018D 5A                  <1> 	pop rdx
+   183                              <1> .Return:
+   184 0000018E C3                  <1> ret
+   185 0000018F 88250000            <1> .char 		dw 9608,0
+   186                              <1> 
+   187                              <1> 
+   188                              <1> ;******************************************************************************
+   189                              <1> ; Copies physical memory from one location to another. Leaves RDI and RSI intact.
+   190                              <1> ; IN:	RSI = source location
+   191                              <1> ;		RDI = destination location
+   192                              <1> ; 		RAX = number of bytes to copy
+   193                              <1> ; OUT:	RSI & RDI updated with number of bytes.
+   194                              <1> ;******************************************************************************
+   195                              <1> cpymem:
+   196                              <1> cpy_mem:
+   197 00000193 50                  <1> 	push rax
+   198 00000194 51                  <1> 	push rcx
+   199 00000195 52                  <1> 	push rdx
+   200                              <1> 
+   201 00000196 B908000000          <1> 	mov rcx,8
+   202 0000019B 4831D2              <1> 	xor rdx,rdx
+   203 0000019E 48F7F1              <1> 	div rcx
+   204 000001A1 4889C1              <1> 	mov rcx,rax
+   205 000001A4 FC                  <1> 	cld
+   206 000001A5 F348A5              <1> 	rep movsq
+   207 000001A8 4889D1              <1> 	mov rcx,rdx
+   208 000001AB F3A4                <1> 	rep movsb
+   209                              <1> 
+   210 000001AD 5A                  <1> 	pop rdx
+   211 000001AE 59                  <1> 	pop rcx
+   212 000001AF 58                  <1> 	pop rax
+   213 000001B0 C3                  <1> ret
+   214                              <1> 
+   215                              <1> 
+   216                              <1> ;******************************************************************************
+   217                              <1> ; Deallocates memory.
+   218                              <1> ; IN:	RAX = memory location
+   219                              <1> ; 		RCX = number of bytes to deallocate
+   220                              <1> ; OUT:	---
+   221                              <1> ;******************************************************************************
+   222                              <1> dalloc:
+   223 000001B1 52                  <1> 	push rdx
+   224 000001B2 BA22020000          <1> 	mov rdx,0x222
+   225 000001B7 CDFF                <1> 	int 0xFF
+   226 000001B9 5A                  <1> 	pop rdx
+   227 000001BA C3                  <1> ret
+   228                              <1> 
+   229                              <1> 
+   230                              <1> ;******************************************************************************
+   231                              <1> ; Returns the PID of the currently running program.
+   232                              <1> ; IN:	---
+   233                              <1> ; OUT:	 AX = PID
+   234                              <1> ;******************************************************************************
+   235                              <1> get_curr_pid:
+   236 000001BB 52                  <1> 	push rdx
+   237 000001BC 4831C0              <1> 	xor rax,rax
+   238 000001BF BA00020000          <1> 	mov rdx, 0x200
+   239 000001C4 5A                  <1> 	pop rdx
+   240 000001C5 C3                  <1> ret
+   241                              <1> 
+   242                              <1> 
+   243                              <1> ;******************************************************************************
+   244                              <1> ; Checks if system is in GUI mode or not. If in GUI mode then initializes
+   245                              <1> ; environment and variables.
+   246                              <1> ;
+   247                              <1> ; IN:	---
+   248                              <1> ; OUT:	GUI; 0=text mode, 1=graphic mode (aka GUI)
+   249                              <1> ;			 ::  If GUI is enabled, then ::
+   250                              <1> ;		GUI_X; 		X resolution of screen
+   251                              <1> ;		GUI_Y; 		Y resolution of screen
+   252                              <1> ;		GUI_CH_W;	width of a character
+   253                              <1> ;		GUI_CH_H;	height of a character
+   254                              <1> ;******************************************************************************
+   255                              <1> get_gui_mode:
+   256 000001C6 50                  <1> 	push rax
+   257 000001C7 52                  <1> 	push rdx
+   258                              <1> 
+   259 000001C8 BA0D010000          <1> 	mov rdx,0x10D
+   260 000001CD CDFF                <1> 	int 0xFF
+   261 000001CF 880425[20000000]    <1> 	mov byte [GUI], al
+   262                              <1> 
+   263                              <1> ; If GUI is enabled then get; screen resolution, character sizes, max. lines,
+   264                              <1> ; bits per pixel, bytes per pixel.
+   265 000001D6 3C00                <1> 	cmp al,0
+   266 000001D8 0F84BC000000        <1> 	jz .Done
+   267 000001DE 53                  <1> 		push rbx
+   268 000001DF 4152                <1> 		push r10
+   269                              <1> 
+   270 000001E1 BA04010000          <1> 			mov rdx,0x104
+   271 000001E6 CDFF                <1> 			int 0xFF
+   272 000001E8 66890425[21000000]  <1> 			mov word [GUI_X],ax
+   273 000001F0 BA05010000          <1> 			mov rdx,0x105
+   274 000001F5 CDFF                <1> 			int 0xFF
+   275 000001F7 66890425[23000000]  <1> 			mov word [GUI_Y],ax
+   276 000001FF BA01010000          <1> 			mov rdx,0x101
+   277 00000204 41BA20000000        <1> 			mov r10,' '
+   278 0000020A CDFF                <1> 			int 0xFF
+   279 0000020C 66890425[25000000]  <1> 			mov [GUI_CH_W],ax
+   280 00000214 66891C25[27000000]  <1> 			mov [GUI_CH_H],bx
+   281 0000021C 668B0425[23000000]  <1> 			mov ax,[GUI_Y]
+   282 00000224 6629D8              <1> 			sub ax,bx
+   283 00000227 6629D8              <1> 			sub ax,bx
+   284 0000022A 66890425[23000000]  <1> 			mov [GUI_Y],ax				; reset Y so that CMD box is not cleared
+   285                              <1> 
+   286 00000232 31C0                <1> 			xor eax,eax
+   287 00000234 BA06010000          <1> 			mov rdx, 0x106 				; get bits per pixel, returns to AX
+   288 00000239 CDFF                <1> 			int 0xFF
+   289 0000023B 66890425[1A000000]  <1> 			mov word [BPP], ax
+   290                              <1> 
+   291 00000243 BB08000000          <1> 			mov ebx,8					; get bytes per pixel
+   292 00000248 31D2                <1> 			xor edx,edx
+   293 0000024A 66F7F3              <1> 			div bx
+   294 0000024D 66890425[1C000000]  <1> 			mov word [BytesPP],ax
+   295                              <1> 
+   296 00000255 BA02010000          <1> 			mov edx, 0x102				; get YPITCH
+   297 0000025A CDFF                <1> 			int 0xFF
+   298 0000025C 66890425[2F000000]  <1> 			mov word [YPITCH], ax
+   299                              <1> 
+   300                              <1> 			; Calc max. printed lines on screen
+   301 00000264 668B0425[23000000]  <1> 			mov ax,[GUI_Y]
+   302 0000026C 668B1C25[27000000]  <1> 			mov bx,[GUI_CH_H]
+   303 00000274 6629D8              <1> 			sub ax,bx
+   304 00000277 6629D8              <1> 			sub ax,bx
+   305 0000027A 4831D2              <1> 			xor rdx,rdx
+   306 0000027D 66F7F3              <1> 			div bx
+   307 00000280 66890425[2D000000]  <1> 			mov [LINE_MAX_GUI],ax
+   308                              <1> 
+   309 00000288 BA0F010000          <1> 			mov edx,0x10F 				; get base video address
+   310 0000028D CDFF                <1> 			int 0xFF
+   311 0000028F 48890425[31000000]  <1> 			mov [VID_ADDR],rax
+   312 00000297 415A                <1> 		pop r10
+   313 00000299 5B                  <1> 		pop rbx
+   314                              <1> 
+   315                              <1> .Done:
+   316 0000029A 5A                  <1> 	pop rdx
+   317 0000029B 58                  <1> 	pop rax
+   318 0000029C C3                  <1> ret
+   319                              <1> 
+   320                              <1> 
+   321                              <1> ;******************************************************************************
+   322                              <1> ; Converts X coordinate into a GUI X coordinate.
+   323                              <1> ; IN:	AL = X coordinate
+   324                              <1> ;		GUI_CH_W
+   325                              <1> ; OUT:	AX = X coordinate
+   326                              <1> ;******************************************************************************
+   327                              <1> get_gui_x:
+   328 0000029D 53                  <1> 	push rbx
+   329 0000029E 52                  <1> 	push rdx
+   330 0000029F 4831D2              <1> 	xor rdx,rdx
+   331 000002A2 4831DB              <1> 	xor rbx,rbx
+   332 000002A5 6625FF00            <1> 	and ax,0x00FF 			; isolate X coordinate
+   333 000002A9 668B1C25[25000000]  <1> 	mov bx,[GUI_CH_W]
+   334 000002B1 66F7E3              <1> 	mul bx
+   335 000002B4 5A                  <1> 	pop rdx
+   336 000002B5 5B                  <1> 	pop rbx
+   337 000002B6 C3                  <1> ret
+   338                              <1> 
+   339                              <1> 
+   340                              <1> ;******************************************************************************
+   341                              <1> ; Converts Y coordinate into a GUI Y coordinate.
+   342                              <1> ; IN:	BL = Y coordinate
+   343                              <1> ;		GUI_CH_H
+   344                              <1> ; OUT:	BX = Y coordinate
+   345                              <1> ;******************************************************************************
+   346                              <1> get_gui_y:
+   347 000002B7 50                  <1> 	push rax
+   348 000002B8 4831C0              <1> 	xor rax,rax
+   349 000002BB 4831D2              <1> 	xor rdx,rdx
+   350 000002BE 668B0425[27000000]  <1> 	mov ax,[GUI_CH_H]
+   351 000002C6 66F7E3              <1> 	mul bx
+   352 000002C9 6689C3              <1> 	mov bx,ax					; return Y
+   353 000002CC 58                  <1> 	pop rax
+   354 000002CD C3                  <1> ret
+   355                              <1> 
+   356                              <1> 
+   357                              <1> ;******************************************************************************
+   358                              <1> ; Returns a PID for a specified program name
+   359                              <1> ; IN:	RSI = program name
+   360                              <1> ; OUT:	 BX = PID
+   361                              <1> ;******************************************************************************
+   362                              <1> get_pid:
+   363 000002CE 52                  <1> 	push rdx
+   364 000002CF BA03040000          <1> 	mov rdx,0x403
+   365 000002D4 CDFF                <1> 	int 0xFF
+   366 000002D6 5A                  <1> 	pop rdx
+   367 000002D7 C3                  <1> ret
+   368                              <1> 
+   369                              <1> ;******************************************************************************
+   370                              <1> ; Returns current tick counter.
+   371                              <1> ; IN:	---
+   372                              <1> ; OUT:	RAX = tick counter
+   373                              <1> ;******************************************************************************
+   374                              <1> get_tick_ctr:
+   375 000002D8 52                  <1> 	push rdx
+   376 000002D9 BA0E000000          <1> 	mov rdx,0xE
+   377 000002DE CDFF                <1> 	int 0xFF
+   378 000002E0 5A                  <1> 	pop rdx
+   379 000002E1 C3                  <1> ret
+   380                              <1> 
+   381                              <1> ;******************************************************************************
+   382                              <1> ; Returns millisecond and sub-millisecond time since the system has been up.
+   383                              <1> ; IN:	---
+   384                              <1> ; OUT:	RAX = ms (upper QWORD), sub ms (lower QWORD)
+   385                              <1> ;******************************************************************************
+   386                              <1> get_time_exact:
+   387 000002E2 53                  <1> 	push rbx
+   388 000002E3 52                  <1> 	push rdx
+   389 000002E4 BA0C000000          <1> 	mov rdx,0xC
+   390 000002E9 CDFF                <1> 	int 0xFF
+   391 000002EB 48C1E020            <1> 	shl rax,32
+   392 000002EF 4809D8              <1> 	or rax,rbx
+   393 000002F2 5A                  <1> 	pop rdx
+   394 000002F3 5B                  <1> 	pop rbx
+   395 000002F4 C3                  <1> ret
+   396                              <1> 
+   397                              <1> ;******************************************************************************
+   398                              <1> ; Returns the current value of the processor’s time-stamp counter. The counter
+   399                              <1> ; is cycles, not time!!
+   400                              <1> ; IN:	---
+   401                              <1> ; OUT:	RAX = cycles
+   402                              <1> ;******************************************************************************
+   403                              <1> get_rdt_cycle:
+   404 000002F5 52                  <1> 	push rdx
+   405 000002F6 31C0                <1> 	xor eax, eax
+   406 000002F8 0FA2                <1> 	cpuid
+   407 000002FA 31C0                <1> 	xor eax, eax
+   408 000002FC 0FA2                <1> 	cpuid
+   409 000002FE 31C0                <1> 	xor eax, eax
+   410 00000300 0FA2                <1> 	cpuid
+   411 00000302 0F31                <1> 	rdtsc
+   412 00000304 48C1E220            <1> 	shl rdx,32
+   413 00000308 4809D0              <1> 	or rax,rdx
+   414 0000030B 5A                  <1> 	pop rdx
+   415 0000030C C3                  <1> ret
+   416                              <1> 
+   417                              <1> 
+   418                              <1> ;******************************************************************************
+   419                              <1> ;	Initialize GUI environment.
+   420                              <1> ;******************************************************************************
+   421                              <1> gui_init:
+   422 0000030D E9B4FEFFFF          <1> 	jmp get_gui_mode
+   423                              <1> 
+   424                              <1> 
+   425                              <1> ;******************************************************************************
+   426                              <1> ;	hexToChar
+   427                              <1> ;		- converts a HEX byte into character string.  BH will hold the high
+   428                              <1> ;		  order byte and BL will hold the low order byte.
+   429                              <1> ;	param/		BL = HEX byte to convert (e.g. DB)
+   430                              <1> ;	returns/	BH = high order byte (e.g. D)
+   431                              <1> ;	returns/	BL = low order byte (e.g. B)
+   432                              <1> ;******************************************************************************
+   433                              <1> hexToChar:
+   434 00000312 50                  <1> 	push rax
+   435                              <1> 
+   436 00000313 31C0                <1> 	xor eax, eax 					; initialize EAX for use
+   437 00000315 30FF                <1> 	xor bh, bh						; initialize BH
+   438                              <1> 
+   439 00000317 88D8                <1> 	mov al, bl	 					; copy BL to AL
+   440                              <1> 
+   441 00000319 3C10                <1> 	cmp al, 0x10 					; if less then 0x10h, then we don't need
+   442 0000031B 7215                <1> 	jb  .Convert_lower_bits			; to worry about the high order bits
+   443                              <1> 
+   444 0000031D 53                  <1> 	push rbx 						; store on stack for later
+   445 0000031E 31DB                <1> 	xor ebx, ebx 					; initialize EBX for use
+   446                              <1> 
+   447 00000320 C0E804              <1> 	shr al, 4						; move bits 5-8 over 1 nibble to get character
+   448 00000323 3C0A                <1> 	cmp al, 0xA
+   449 00000325 7C04                <1> 	jl  .High_0_to_9
+   450 00000327 0437                <1> 	add al, 0x37
+   451 00000329 EB02                <1> 	jmp .Add_to_BH
+   452                              <1> .High_0_to_9:
+   453 0000032B 0430                <1> 	add al, 0x30
+   454                              <1> 
+   455                              <1> .Add_to_BH:
+   456 0000032D 88C7                <1> 	mov bh, al						; put in BH
+   457                              <1> 
+   458 0000032F 58                  <1> 	pop rax							; retrieve orignal number from stack
+   459 00000330 240F                <1> 	and al, 1111b 					; mask out the upper nibble in AL
+   460                              <1> 
+   461                              <1> .Convert_lower_bits:
+   462 00000332 3C0A                <1> 	cmp al, 0xA
+   463 00000334 7204                <1> 	jb  .Lower_0_to_9
+   464 00000336 0437                <1> 	add al, 0x37
+   465 00000338 EB02                <1> 	jmp .Add_to_BL
+   466                              <1> 
+   467                              <1> .Lower_0_to_9:
+   468 0000033A 0430                <1> 	add al, 0x30
+   469                              <1> 
+   470                              <1> .Add_to_BL:
+   471 0000033C 88C3                <1> 	mov bl, al
+   472                              <1> 
+   473                              <1> .Done:
+   474 0000033E 58                  <1> 	pop rax
+   475 0000033F C3                  <1> ret
+   476                              <1> 
+   477                              <1> 
+   478                              <1> ;******************************************************************************
+   479                              <1> ; Converts a 4 bytes hex number to an IP address string.
+   480                              <1> ; NOTES:
+   481                              <1> ;		* This does not do any error checking, that is up to the programmer.
+   482                              <1> ;		* This will increment RDI.
+   483                              <1> ; IN:	EAX = hex number
+   484                              <1> ; 		RDI = memory location of string
+   485                              <1> ;******************************************************************************
+   486                              <1> hexToIPString:
+   487 00000340 50                  <1> 	push rax
+   488 00000341 53                  <1> 	push rbx
+   489                              <1> 	;
+   490 00000342 4831DB              <1> 	xor rbx,rbx
+   491 00000345 88C3                <1> 	mov bl, al	 	; fourth octet
+   492 00000347 E890010000          <1> 	call intToString_incr_rbx
+   493 0000034C C6072E              <1> 	mov byte [rdi], '.'
+   494 0000034F 48FFC7              <1> 	inc rdi
+   495 00000352 48C1E808            <1> 	shr rax,8
+   496                              <1> 
+   497 00000356 88C3                <1> 	mov bl, al		; third octet
+   498 00000358 E87F010000          <1> 	call intToString_incr_rbx
+   499 0000035D C6072E              <1> 	mov byte [rdi], '.'
+   500 00000360 48FFC7              <1> 	inc rdi
+   501 00000363 48C1E808            <1> 	shr rax,8
+   502                              <1> 
+   503 00000367 88C3                <1> 	mov bl, al		; second octet
+   504 00000369 E86E010000          <1> 	call intToString_incr_rbx
+   505 0000036E C6072E              <1> 	mov byte [rdi], '.'
+   506 00000371 48FFC7              <1> 	inc rdi
+   507 00000374 48C1E808            <1> 	shr rax,8
+   508                              <1> 
+   509 00000378 88C3                <1> 	mov bl, al		; first octet
+   510 0000037A E85D010000          <1> 	call intToString_incr_rbx
+   511                              <1> 
+   512 0000037F 5B                  <1> 	pop rbx
+   513 00000380 58                  <1> 	pop rax
+   514 00000381 C3                  <1> ret
+   515                              <1> 
+   516                              <1> ;	Same as hexToIPString but uses EBX instead
+   517                              <1> hexToIPString_ebx:
+   518 00000382 50                  <1> 	push rax
+   519 00000383 89D8                <1> 	mov eax,ebx
+   520 00000385 E8B6FFFFFF          <1> 	call hexToIPString
+   521 0000038A 58                  <1> 	pop rax
+   522 0000038B C3                  <1> ret
+   523                              <1> 
+   524                              <1> 
+   525                              <1> ;	Calls the function below, but allows the programmer to use EBX as
+   526                              <1> ;	the parameter instead of EAX.
+   527                              <1> ;	IN:	EBX = hex number
+   528                              <1> ;		EDI = address pointer to put string
+   529                              <1> hexToString_ebx:
+   530 0000038C 50                  <1> 	push rax
+   531 0000038D 4889D8              <1> 	mov rax, rbx
+   532 00000390 E802000000          <1> 	call hexToString
+   533 00000395 58                  <1> 	pop rax
+   534 00000396 C3                  <1> ret
+   535                              <1> 
+   536                              <1> ;******************************************************************************
+   537                              <1> ;	hexToString
+   538                              <1> ;		- converts a hex number to string so that you can print it to the
+   539                              <1> ;		  screen.
+   540                              <1> ;	param/		RAX = hex number
+   541                              <1> ;	param/		RDI = address pointer to put string
+   542                              <1> ;******************************************************************************
+   543                              <1> hexToString:
+   544 00000397 50                  <1> 	push rax
+   545 00000398 53                  <1> 	push rbx
+   546 00000399 57                  <1> 	push rdi
+   547                              <1> 
+   548 0000039A 4883F800            <1> 	cmp rax, 0					; first check if value is zero
+   549 0000039E 742C                <1> 	je  .Return_zero			; if so, then just return a zero and exit
+   550                              <1> 
+   551 000003A0 4831DB              <1> 	xor rbx, rbx				; initialize EBX to zeros
+   552 000003A3 53                  <1> 	push rbx 					; push zeros to stack to act as a terminator
+   553                              <1> 
+   554                              <1> .Loop1:
+   555 000003A4 4883F800            <1> 	cmp rax, 0					; if EAX=0 then there is nothing left to convert
+   556 000003A8 7413                <1> 	je .Save_string_to_var 		; exit and build string
+   557                              <1> 
+   558 000003AA 4889C3              <1> 	mov rbx, rax				; create a working copy
+   559 000003AD 4883E30F            <1> 	and rbx, 1111b 				; get the last nibble
+   560 000003B1 E85CFFFFFF          <1> 	call hexToChar				; convert to ASCII character
+   561 000003B6 53                  <1> 	push rbx					; save ASCII values on stack
+   562 000003B7 48C1E804            <1> 	shr rax, 4
+   563 000003BB EBE7                <1> 	jmp .Loop1
+   564                              <1> 
+   565                              <1> .Save_string_to_var:
+   566 000003BD 5B                  <1> 	pop rbx
+   567                              <1> 
+   568                              <1> .Loop2:
+   569 000003BE 4883FB00            <1> 	cmp rbx, 0					; terminator found, exit loop
+   570 000003C2 740E                <1> 	je  .Done
+   571 000003C4 881F                <1> 	mov [rdi], bl 				; copy to address pointer
+   572 000003C6 48FFC7              <1> 	inc rdi						; move EDI forward
+   573 000003C9 5B                  <1> 	pop rbx
+   574 000003CA EBF2                <1> 	jmp .Loop2
+   575                              <1> 
+   576                              <1> .Return_zero:
+   577 000003CC C60730              <1> 	mov [rdi], byte '0'			; ASCII value of zero
+   578 000003CF 48FFC7              <1> 	inc rdi
+   579                              <1> 
+   580                              <1> .Done:
+   581 000003D2 C60700              <1> 	mov [rdi], byte 0			; add null terminator
+   582 000003D5 5F                  <1> 	pop rdi
+   583 000003D6 5B                  <1> 	pop rbx
+   584 000003D7 58                  <1> 	pop rax
+   585 000003D8 C3                  <1> ret
+   586                              <1> 
+   587                              <1> 
+   588                              <1> inc_line:
+   589 000003D9 50                  <1> 	push rax
+   590                              <1> 
+   591 000003DA 66FF0425[29000000]  <1> 	inc word [LINE_NO]
+   592                              <1> 
+   593                              <1> ; Check if at end of the screen
+   594 000003E2 803C25[20000000]00  <1> 	cmp byte [GUI],0
+   595 000003EA 750A                <1> 	jnz .GUI
+   596 000003EC 668B0425[2B000000]  <1> 		mov ax,[LINE_MAX_TXT]
+   597 000003F4 EB08                <1> 		jmp .Chk_line
+   598                              <1> 	.GUI:
+   599 000003F6 668B0425[2D000000]  <1> 		mov ax,[LINE_MAX_GUI]
+   600                              <1> 	.Chk_line:
+   601                              <1> 
+   602 000003FE 66390425[29000000]  <1> 	cmp word [LINE_NO],ax
+   603 00000406 7702                <1> 	ja .Reset
+   604                              <1> 
+   605                              <1> .Done:
+   606 00000408 58                  <1> 	pop rax
+   607 00000409 C3                  <1> ret
+   608                              <1> .Reset:
+   609 0000040A 66C70425[29000000]- <1> 	mov word [LINE_NO],0
+   609 00000412 0000                <1>
+   610 00000414 E8F9FCFFFF          <1> 	call clear_screen
+   611 00000419 EBED                <1> 	jmp .Done
+   612                              <1> 
+   613                              <1> init_line:
+   614 0000041B E8B9FFFFFF          <1> 	call inc_line
+   615 00000420 668B0425[29000000]  <1> 	mov ax,[LINE_NO]
+   616 00000428 66C1E008            <1> 	shl ax,8
+   617 0000042C C3                  <1> ret
+   618                              <1> 
+   619                              <1> ;******************************************************************************
+   620                              <1> ; Initialize environment.
+   621                              <1> ;******************************************************************************
+   622                              <1> initialize:
+   623 0000042D E894FDFFFF          <1> 	call get_gui_mode
+   624 00000432 C3                  <1> ret
+   625                              <1> 
+   626                              <1> 
+   627                              <1> ;******************************************************************************
+   628                              <1> ;	IntToHex
+   629                              <1> ;		- converts a decimal number to a hex number
+   630                              <1> ;	IN:		RBX = original decimal number
+   631                              <1> ;	OUT:	RBX = converted hex number
+   632                              <1> ;******************************************************************************
+   633                              <1> IntToHex:
+   634 00000433 50                  <1> 	push rax 				; working digit
+   635 00000434 51                  <1> 	push rcx 				; multiplier
+   636 00000435 52                  <1> 	push rdx
+   637 00000436 4150                <1> 	push r8 				; running number
+   638                              <1> 
+   639 00000438 4831C0              <1> 	xor rax, rax
+   640 0000043B 4831D2              <1> 	xor rdx, rdx
+   641 0000043E 4889D8              <1> 	mov rax, rbx
+   642 00000441 B90A000000          <1> 	mov rcx, 0xA
+   643                              <1> 
+   644 00000446 4883E00F            <1> 	and rax, 0xF 			; first digit is easy
+   645 0000044A 4989C0              <1> 	mov r8, rax 			; save running number
+   646 0000044D 48C1EB04            <1> 	shr rbx, 4				; strip off 1st digit
+   647                              <1> 
+   648                              <1> .Loop1:
+   649 00000451 4883FB00            <1> 	cmp rbx, 0
+   650 00000455 742A                <1> 	jz .Done
+   651 00000457 4889D8              <1> 	mov rax, rbx
+   652 0000045A 4883E00F            <1> 	and rax, 0xF 			; strip off last digit
+   653 0000045E 48F7E1              <1> 	mul rcx
+   654 00000461 4C01C0              <1> 	add rax, r8				; add to running total
+   655 00000464 4989C0              <1> 	mov r8, rax 			; store in memory
+   656                              <1> 
+   657 00000467 4889C8              <1> 	mov rax, rcx
+   658 0000046A B90A000000          <1> 	mov rcx, 0xA
+   659 0000046F 48F7E1              <1> 	mul rcx
+   660 00000472 4889C1              <1> 	mov rcx, rax 			; update multiplier
+   661                              <1> 
+   662 00000475 4831C0              <1> 	xor rax, rax
+   663 00000478 4831D2              <1> 	xor rdx, rdx
+   664 0000047B 48C1EB04            <1> 	shr rbx, 4
+   665 0000047F EBD0                <1> 	jmp .Loop1
+   666                              <1> 
+   667                              <1> .Done:
+   668 00000481 4C89C3              <1> 	mov rbx, r8				; move results back to EBX
+   669                              <1> 
+   670 00000484 4158                <1> 	pop r8
+   671 00000486 5A                  <1> 	pop rdx
+   672 00000487 59                  <1> 	pop rcx
+   673 00000488 58                  <1> 	pop rax
+   674 00000489 C3                  <1> ret
+   675                              <1> ; Uses RCX as the parameter for intToHex.
+   676                              <1> ;	IN:		RCX = original decimal number
+   677                              <1> ;	OUT:	RCX = converted hex number
+   678                              <1> IntToHex_rcx:
+   679 0000048A 53                  <1> 	push rbx
+   680 0000048B 4889CB              <1> 	mov rbx,rcx
+   681 0000048E E8A0FFFFFF          <1> 	call IntToHex
+   682 00000493 4889D9              <1> 	mov rcx,rbx
+   683 00000496 5B                  <1> 	pop rbx
+   684 00000497 C3                  <1> ret
+   685                              <1> 
+   686                              <1> 
+   687                              <1> 
+   688                              <1> ;	This is call lets the user use EBX instead of EAX
+   689                              <1> ;	IN:	RBX = number to convert
+   690                              <1> ;	OUT:	---   this version does not return anything, not wasting EAX
+   691                              <1> intToString_ebx:
+   692                              <1> intToString_rbx:
+   693 00000498 50                  <1> 	push rax
+   694 00000499 4889D8              <1> 	mov rax, rbx
+   695 0000049C E802000000          <1> 	call intToString
+   696 000004A1 58                  <1> 	pop rax
+   697 000004A2 C3                  <1> ret
+   698                              <1> ;******************************************************************************
+   699                              <1> ;	intToString
+   700                              <1> ;		- converts an integer to a string, adds a NULL terminator (0) at the end.
+   701                              <1> ;	param/		RAX = number to convert
+   702                              <1> ;	param/		RDI = pointer location of buffer to put string
+   703                              <1> ;	returns/	RAX = number of bytes written
+   704                              <1> ;******************************************************************************
+   705                              <1> intToString:
+   706 000004A3 50                  <1> 	push rax
+   707 000004A4 53                  <1> 	push rbx
+   708 000004A5 51                  <1> 	push rcx
+   709 000004A6 52                  <1> 	push rdx
+   710 000004A7 57                  <1> 	push rdi
+   711 000004A8 55                  <1> 	push rbp
+   712                              <1> 
+   713 000004A9 4889E5              <1> 	mov rbp, rsp
+   714 000004AC B90A000000          <1> 	mov rcx, 10
+   715                              <1> 
+   716                              <1> .pushDigits:
+   717 000004B1 4831D2              <1> 	xor rdx, rdx		; zero extend eax
+   718 000004B4 48F7F1              <1> 	div rcx				; divide RAX by 10, RDX is now the next digit
+   719 000004B7 4883C230            <1> 	add rdx, 0x30		; convert to ASCII digit
+   720 000004BB 52                  <1> 	push rdx 			; push back onto stack and store it to be popped off
+   721 000004BC 4885C0              <1> 	test rax, rax 		; remove leading zeros
+   722 000004BF 75F0                <1> 	jnz .pushDigits
+   723                              <1> 
+   724                              <1> .popDigits:
+   725 000004C1 58                  <1> 	pop rax
+   726 000004C2 AA                  <1> 	stosb				; only write the lower byte, not the whole word
+   727 000004C3 4839EC              <1> 	cmp rsp, rbp		; if RSP==RBP, all digits popped
+   728 000004C6 75F9                <1> 	jne .popDigits
+   729                              <1> 
+   730 000004C8 4831C0              <1> 	xor rax, rax 		; add trailing NULL
+   731 000004CB AA                  <1> 	stosb
+   732                              <1> 
+   733 000004CC 4889F8              <1> 	mov rax, rdi
+   734                              <1> 
+   735 000004CF 5D                  <1> 	pop rbp
+   736 000004D0 5F                  <1> 	pop rdi
+   737 000004D1 5A                  <1> 	pop rdx
+   738 000004D2 59                  <1> 	pop rcx
+   739 000004D3 5B                  <1> 	pop rbx
+   740                              <1> 	;pop rax
+   741 000004D4 4883C408            <1> 	add rsp,8			; pop off original value of RAX
+   742 000004D8 4829F8              <1> 	sub rax, rdi 		; return number of bytes written
+   743 000004DB C3                  <1> ret
+   744                              <1> 
+   745                              <1> 
+   746                              <1> ; Same as intToString_incr below except it uses RBX instead of RAX
+   747                              <1> ;	param/		RBX = number to convert
+   748                              <1> ;	param/		RDI = pointer location of buffer to put string
+   749                              <1> ;	returns/	RBX = number of bytes written
+   750                              <1> intToString_incr_rbx:
+   751 000004DC 50                  <1> 	push rax
+   752 000004DD 4889D8              <1> 	mov rax,rbx
+   753 000004E0 E802000000          <1> 	call intToString_incr
+   754 000004E5 58                  <1> 	pop rax
+   755 000004E6 C3                  <1> ret
+   756                              <1> ;******************************************************************************
+   757                              <1> ;	intToString_incr
+   758                              <1> ;		- Converts an integer to a string, adds a NULL terminator (0) at the end.
+   759                              <1> ;		  Does not reset RDI back to starting position, leaves it where it is.
+   760                              <1> ;	param/		RAX = number to convert
+   761                              <1> ;	param/		RDI = pointer location of buffer to put string
+   762                              <1> ;	returns/	RAX = number of bytes written
+   763                              <1> ;******************************************************************************
+   764                              <1> intToString_incr:
+   765 000004E7 53                  <1> 	push rbx
+   766 000004E8 51                  <1> 	push rcx
+   767 000004E9 52                  <1> 	push rdx
+   768 000004EA 55                  <1> 	push rbp
+   769                              <1> 
+   770 000004EB 57                  <1> 	push rdi 			; save starting point to stack
+   771                              <1> 
+   772 000004EC 89E5                <1> 	mov ebp, esp
+   773 000004EE B90A000000          <1> 	mov ecx, 10
+   774                              <1> 
+   775                              <1> .pushDigits:
+   776 000004F3 31D2                <1> 	xor edx, edx		; zero extend eax
+   777 000004F5 F7F1                <1> 	div ecx				; divide EAX by 10, EDX is now the next digit
+   778 000004F7 83C230              <1> 	add edx, 30h		; convert to ASCII digit
+   779 000004FA 52                  <1> 	push rdx 			; push back onto stack and store it to be popped off
+   780 000004FB 85C0                <1> 	test eax, eax 		; remove leading zeros
+   781 000004FD 75F4                <1> 	jnz .pushDigits
+   782                              <1> 
+   783                              <1> .popDigits:
+   784 000004FF 58                  <1> 	pop rax
+   785 00000500 AA                  <1> 	stosb				; only write the lower byte, not the whole word
+   786 00000501 39EC                <1> 	cmp esp, ebp		; if ESP==EBP, all digits popped
+   787 00000503 75FA                <1> 	jne .popDigits
+   788                              <1> 
+   789 00000505 C60700              <1> 	mov byte [rdi], 0	; add trailing NULL
+   790                              <1> 
+   791 00000508 4889F8              <1> 	mov rax, rdi
+   792 0000050B 5B                  <1> 	pop rbx 			; pop original starting point
+   793 0000050C 4829D8              <1> 	sub rax, rbx 		; calculate and return number of bytes written
+   794                              <1> 
+   795 0000050F 5D                  <1> 	pop rbp
+   796 00000510 5A                  <1> 	pop rdx
+   797 00000511 59                  <1> 	pop rcx
+   798 00000512 5B                  <1> 	pop rbx
+   799 00000513 C3                  <1> ret
+   800                              <1> 
+   801                              <1> 
+   802                              <1> ;*******************************************************************************
+   803                              <1> ; Get IP addresses, NICs 1 to 4.
+   804                              <1> ; IN:	---
+   805                              <1> ; OUT:	RAX = NIC1
+   806                              <1> ;		RBX = NIC2
+   807                              <1> ;		RCX = NIC3
+   808                              <1> ;		RDX = NIC4
+   809                              <1> ;*******************************************************************************
+   810                              <1> net_get_ip:
+   811 00000514 52                  <1> 	push rdx
+   812 00000515 4831C0              <1> 	xor rax,rax 		; initialize reg's
+   813 00000518 4831DB              <1> 	xor rbx,rbx 		;
+   814 0000051B 4831C9              <1> 	xor rcx,rcx 		;
+   815 0000051E 4831D2              <1> 	xor rdx,rdx 		;
+   816 00000521 BA1A000000          <1> 	mov rdx,0x1A		; get IP's
+   817 00000526 CDFF                <1> 	int 0xFF
+   818 00000528 5A                  <1> 	pop rdx
+   819 00000529 C3                  <1> ret
+   820                              <1> 
+   821                              <1> ;*******************************************************************************
+   822                              <1> ; Initializes memory to zeros.
+   823                              <1> ; IN:	RAX = memory start
+   824                              <1> ;		RCX = size, in bytes
+   825                              <1> ;*******************************************************************************
+   826                              <1> null_ram:
+   827 0000052A 50                  <1> 	push rax
+   828 0000052B 53                  <1> 	push rbx
+   829 0000052C 51                  <1> 	push rcx
+   830 0000052D 52                  <1> 	push rdx
+   831 0000052E 57                  <1> 	push rdi
+   832 0000052F 4150                <1> 	push r8 			; memory start
+   833                              <1> 
+   834 00000531 4989C0              <1> 	mov r8,rax			; free up RAX
+   835                              <1> 
+   836 00000534 4889C8              <1> 	mov rax,rcx
+   837 00000537 BB08000000          <1> 	mov rbx,8
+   838 0000053C 4831D2              <1> 	xor rdx,rdx
+   839 0000053F 48F7F3              <1> 	div rbx
+   840 00000542 4889C1              <1> 	mov rcx,rax
+   841 00000545 4C89C7              <1> 	mov rdi, r8
+   842 00000548 4831C0              <1> 	xor rax,rax
+   843 0000054B FC                  <1> 	cld
+   844 0000054C F348AB              <1> 	rep stosq 			; NULL QWORDS
+   845 0000054F 4889D1              <1> 	mov rcx,rdx
+   846 00000552 F3AA                <1> 	rep stosb			; NULL remaining bytes
+   847                              <1> 
+   848 00000554 4158                <1> 	pop r8
+   849 00000556 5F                  <1> 	pop rdi
+   850 00000557 5A                  <1> 	pop rdx
+   851 00000558 59                  <1> 	pop rcx
+   852 00000559 5B                  <1> 	pop rbx
+   853 0000055A 58                  <1> 	pop rax
+   854 0000055B C3                  <1> ret
+   855                              <1> 
+   856                              <1> 
+   857                              <1> ;******************************************************************************
+   858                              <1> ; Text mode or GUI mode print to X,Y location.
+   859                              <1> ;
+   860                              <1> ; This is the same as print_cli, except you can specify X,Y co-ordinates. In
+   861                              <1> ; GUI mode; X will use character width * X and Y will use character height *
+   862                              <1> ; Y.
+   863                              <1> ; NOTE: This routine will not clear the screen. Programmer needs to figure out
+   864                              <1> ;       when to do that.
+   865                              <1> ;
+   866                              <1> ; IN:	 AL = X
+   867                              <1> ;		 AH = Y
+   868                              <1> ;		RSI = pointer to string location
+   869                              <1> ;******************************************************************************
+   870                              <1> print_cli_xy:
+   871 0000055C 52                  <1> 	push rdx
+   872 0000055D BA00040000          <1> 	mov rdx,0x400
+   873 00000562 CDFF                <1> 	int 0xFF
+   874 00000564 5A                  <1> 	pop rdx
+   875 00000565 C3                  <1> ret
+   876                              <1> 
+   877                              <1> 
+   878                              <1> ;******************************************************************************
+   879                              <1> ; Sames as print_cli_xy, except you can specify a color if in GUI mode.
+   880                              <1> ; IN:	 AL = X
+   881                              <1> ;		 AH = y
+   882                              <1> ;		RSI = pointer to string location
+   883                              <1> ;******************************************************************************
+   884                              <1> print_cli_xy_clr:
+   885 00000566 52                  <1> 	push rdx
+   886 00000567 BA02040000          <1> 	mov rdx,0x402
+   887 0000056C CDFF                <1> 	int 0xFF
+   888 0000056E 5A                  <1> 	pop rdx
+   889 0000056F C3                  <1> ret
+   890                              <1> 
+   891                              <1> ;******************************************************************************
+   892                              <1> ; Same as print_cli_xy, except you specify number of characters to print.
+   893                              <1> ; And the width (x coordinate).
+   894                              <1> ; NOTE, this routine does not check if you are at the end of the screen.
+   895                              <1> ; Or any other error checking, up to the programmer.
+   896                              <1> ;
+   897                              <1> ; IN:	 AL = X
+   898                              <1> ;		 AH = Y
+   899                              <1> ;		 BX = width
+   900                              <1> ;		 CX = number of characters to print
+   901                              <1> ;		RSI = pointer to string location
+   902                              <1> ; OUT:	RAX = x/y coordinates
+   903                              <1> ;******************************************************************************
+   904                              <1> print_cli_xy_cw:
+   905 00000570 52                  <1> 	push rdx
+   906 00000571 BA01040000          <1> 	mov rdx,0x401
+   907 00000576 CDFF                <1> 	int 0xFF
+   908 00000578 5A                  <1> 	pop rdx
+   909 00000579 C3                  <1> ret
+   910                              <1> 
+   911                              <1> 
+   912                              <1> ; Prints a NULL terminated string to the screen. This is the same as a console
+   913                              <1> ; mode print routine. It will start at the beginning of the line and print
+   914                              <1> ; the text.
+   915                              <1> ;
+   916                              <1> ; IN:	LINE_NO = Y coordinate
+   917                              <1> ;		RSI = String to print
+   918                              <1> print_ln:
+   919 0000057A 803C25[20000000]00  <1> 	cmp byte [GUI],0
+   920 00000582 752F                <1> 	jnz Print_gui
+   921                              <1> 
+   922 00000584 50                  <1> 	push rax
+   923 00000585 6631C0              <1> 	xor ax,ax
+   924                              <1> 
+   925 00000588 66FF0425[29000000]  <1> 	inc word [LINE_NO]
+   926                              <1> 
+   927 00000590 66833C25[29000000]- <1> 	cmp word [LINE_NO],21
+   927 00000598 15                  <1>
+   928 00000599 7205                <1> 	jb .End_clr_screen
+   929 0000059B E872FBFFFF          <1> 		call clear_screen
+   930                              <1> 	.End_clr_screen:
+   931 000005A0 53                  <1> 	push rbx
+   932 000005A1 668B1C25[29000000]  <1> 	mov bx,[LINE_NO]
+   933 000005A9 88DC                <1> 	mov ah,bl
+   934 000005AB 5B                  <1> 	pop rbx
+   935 000005AC E875000000          <1> 	call Print_txt
+   936                              <1> 
+   937 000005B1 58                  <1> 	pop rax
+   938 000005B2 C3                  <1> ret
+   939                              <1> 
+   940                              <1> ; Prints a NULL terminated string in GUI mode
+   941                              <1> ; IN:	LINE_NO = Y coordinate
+   942                              <1> ;		RSI = null temrinated string
+   943                              <1> Print_gui:
+   944 000005B3 50                  <1> 	push rax
+   945 000005B4 53                  <1> 	push rbx
+   946 000005B5 51                  <1> 	push rcx
+   947 000005B6 52                  <1> 	push rdx
+   948                              <1> 
+   949                              <1> 	; Check if end of screen
+   950 000005B7 66833C25[29000000]- <1> 	cmp word [LINE_NO],21
+   950 000005BF 15                  <1>
+   951 000005C0 7205                <1> 	jb .Skip_clr_scr
+   952 000005C2 E84BFBFFFF          <1> 		call clear_screen
+   953                              <1> 	.Skip_clr_scr:
+   954                              <1> 
+   955                              <1> 
+   956                              <1> ;	Parameters:	RDX = 0x121
+   957                              <1> ;			AX = X coordinate
+   958                              <1> ;			BX = Y coordinate
+   959                              <1> ;			ECX = color
+   960                              <1> ;			RSI = memory location of NULL terminated string
+   961 000005C7 66B80500            <1> 	mov ax,5
+   962 000005CB E834000000          <1> 	call .Get_line_no			; returns to BX
+   963 000005D0 B900FF0000          <1> 	mov ecx, 0x00FF00
+   964 000005D5 BA21010000          <1> 	mov rdx,0x121
+   965 000005DA CDFF                <1> 	int 0xFF
+   966                              <1> 
+   967 000005DC 66FF0425[29000000]  <1> 	inc word [LINE_NO]
+   968                              <1> 
+   969 000005E4 5A                  <1> 	pop rdx
+   970 000005E5 59                  <1> 	pop rcx
+   971 000005E6 5B                  <1> 	pop rbx
+   972 000005E7 58                  <1> 	pop rax
+   973 000005E8 C3                  <1> ret
+   974                              <1> ; Returns the X coordinate for a character based on the current
+   975                              <1> ; character counter CH_NUM. Then increments CH_NUM for next time.
+   976                              <1> ; IN:	CH_NUM
+   977                              <1> ; OUT:	AX = X coordinate
+   978                              <1> 
+   979                              <1> .Get_ch_no:
+   980 000005E9 53                  <1> 	push rbx
+   981 000005EA 52                  <1> 	push rdx
+   982                              <1> 
+   983 000005EB 4831D2              <1> 	xor rdx,rdx
+   984 000005EE 668B0425[1E000000]  <1> 	mov ax,[CH_NUM]
+   985 000005F6 668B1C25[25000000]  <1> 	mov bx,[GUI_CH_W]
+   986 000005FE 66F7E3              <1> 	mul bx
+   987                              <1> 
+   988 00000601 5A                  <1> 	pop rdx
+   989 00000602 5B                  <1> 	pop rbx
+   990 00000603 C3                  <1> ret
+   991                              <1> 
+   992                              <1> ; Returns the BX value based on the current LINE_NO value.
+   993                              <1> ; IN:	LINE_NO
+   994                              <1> ; OUT:	BX = Y coordinate
+   995                              <1> .Get_line_no:
+   996 00000604 50                  <1> 	push rax
+   997 00000605 52                  <1> 	push rdx
+   998                              <1> 
+   999 00000606 4831C0              <1> 	xor rax,rax
+  1000 00000609 4831DB              <1> 	xor rbx,rbx
+  1001 0000060C 4831D2              <1> 	xor rdx,rdx
+  1002                              <1> 
+  1003 0000060F 668B0425[29000000]  <1> 	mov ax,[LINE_NO]
+  1004 00000617 668B1C25[27000000]  <1> 	mov bx,[GUI_CH_H]
+  1005 0000061F F7E3                <1> 	mul ebx
+  1006                              <1> 
+  1007 00000621 89C3                <1> 	mov ebx,eax
+  1008                              <1> 
+  1009 00000623 5A                  <1> 	pop rdx
+  1010 00000624 58                  <1> 	pop rax
+  1011 00000625 C3                  <1> ret
+  1012                              <1> 
+  1013                              <1> 
+  1014                              <1> ; Prints a NULL terminated string in text mode
+  1015                              <1> ; IN:	 AL = X coordinate
+  1016                              <1> ;		 AH = Y coordinate
+  1017                              <1> ;		RSI = null terminated string
+  1018                              <1> Print_txt:
+  1019 00000626 52                  <1> 	push rdx
+  1020 00000627 BA05030000          <1> 	mov rdx,0x305				; print string
+  1021 0000062C CDFF                <1> 	int 0xFF
+  1022 0000062E 5A                  <1> 	pop rdx
+  1023 0000062F C3                  <1> ret
+  1024                              <1> 
+  1025                              <1> 
+  1026                              <1> ;******************************************************************************
+  1027                              <1> ; Relase memory from current user program. This does not give memory back to
+  1028                              <1> ; the OS. It only deletes the entry(s) in the Page Tables.
+  1029                              <1> ; IN:	RAX = memory location
+  1030                              <1> ;		RCX = size in bytes to release
+  1031                              <1> ;******************************************************************************
+  1032                              <1> relmem:
+  1033 00000630 52                  <1> 	push rdx
+  1034 00000631 BA23020000          <1> 	mov rdx,0x223
+  1035 00000636 CDFF                <1> 	int 0xFF
+  1036 00000638 5A                  <1> 	pop rdx
+  1037 00000639 C3                  <1> ret
+  1038                              <1> 
+  1039                              <1> 
+  1040                              <1> ;******************************************************************************
+  1041                              <1> ;	str_chomp
+  1042                              <1> ;		- removes leading and trailing spaces
+  1043                              <1> ;	param/		RAX = address pointer to string
+  1044                              <1> ;******************************************************************************
+  1045                              <1> str_chomp:
+  1046 0000063A 50                  <1> 	push rax
+  1047 0000063B 51                  <1> 	push rcx
+  1048 0000063C 52                  <1> 	push rdx
+  1049 0000063D 57                  <1> 	push rdi
+  1050 0000063E 56                  <1> 	push rsi
+  1051                              <1> 
+  1052 0000063F 4889C2              <1> 	mov rdx, rax				; save string location
+  1053                              <1> 
+  1054 00000642 4889C7              <1> 	mov rdi, rax				; put location into RDI
+  1055 00000645 B900000000          <1> 	mov rcx, 0					; space counter
+  1056                              <1> 
+  1057                              <1> .Count:							; get number of leading spaces
+  1058 0000064A 803F20              <1> 	cmp byte [rdi], ' '
+  1059 0000064D 7508                <1> 	jne .Counted
+  1060 0000064F 48FFC1              <1> 	inc rcx
+  1061 00000652 48FFC7              <1> 	inc rdi
+  1062 00000655 EBF3                <1> 	jmp .Count
+  1063                              <1> 
+  1064                              <1> .Counted:
+  1065 00000657 4883F900            <1> 	cmp rcx, 0					; if no leading spaces
+  1066 0000065B 7416                <1> 	je  .Finished_copy
+  1067                              <1> 
+  1068 0000065D 4889FE              <1> 	mov rsi, rdi 				; address of first non-space
+  1069 00000660 4889D7              <1> 	mov rdi, rdx 				; reset to original start of string
+  1070                              <1> 
+  1071                              <1> .Copy_string:
+  1072 00000663 8A06                <1> 	mov al, [rsi]				; copy to ESI to DSI
+  1073 00000665 8807                <1> 	mov [rdi], al				; includes terminator
+  1074 00000667 3C00                <1> 	cmp al, 0
+  1075 00000669 7408                <1> 	je  .Finished_copy
+  1076                              <1> 
+  1077 0000066B 48FFC6              <1> 	inc rsi
+  1078 0000066E 48FFC7              <1> 	inc rdi
+  1079 00000671 EBF0                <1> 	jmp .Copy_string
+  1080                              <1> 
+  1081                              <1> .Finished_copy:
+  1082 00000673 4889D0              <1> 	mov rax, rdx 				; EAX = original string start
+  1083 00000676 E88F010000          <1> 	call str_len
+  1084 0000067B 6683F800            <1> 	cmp ax, 0					; if string empty, then exit
+  1085 0000067F 7413                <1> 	je  .Done
+  1086                              <1> 
+  1087 00000681 4889D6              <1> 	mov rsi, rdx
+  1088 00000684 4801C6              <1> 	add rsi, rax 				; move to end of string
+  1089                              <1> 
+  1090                              <1> .More:
+  1091 00000687 48FFCE              <1> 	dec rsi
+  1092 0000068A 803E20              <1> 	cmp byte [rsi], ' '
+  1093 0000068D 7505                <1> 	jne .Done
+  1094 0000068F C60600              <1> 	mov byte [rsi], 0			; fill end spaces with NULL
+  1095 00000692 EBF3                <1> 	jmp .More					; first Zero is the string terminator
+  1096                              <1> 
+  1097                              <1> .Done:
+  1098 00000694 5E                  <1> 	pop rsi
+  1099 00000695 5F                  <1> 	pop rdi
+  1100 00000696 5A                  <1> 	pop rdx
+  1101 00000697 59                  <1> 	pop rcx
+  1102 00000698 58                  <1> 	pop rax
+  1103 00000699 C3                  <1>  ret
+  1104                              <1> 
+  1105                              <1> 
+  1106                              <1>  ;******************************************************************************
+  1107                              <1>  ;	str_cmp
+  1108                              <1>  ;		- compares two zero terminated strings, if they are the same;
+  1109                              <1>  ;		  returns 0 othrwise, return 1.
+  1110                              <1>  ;	param/		RSI = pointer to source string
+  1111                              <1>  ;	param/		RDI = pointer to destination string
+  1112                              <1>  ;	returns/	 AL = 0 strings are the same, 1 strings are different
+  1113                              <1>  ;******************************************************************************
+  1114                              <1> str_cmp:
+  1115 0000069A 53                  <1>  	push rbx
+  1116 0000069B 57                  <1>  	push rdi
+  1117 0000069C 56                  <1>  	push rsi
+  1118                              <1> 
+  1119                              <1>  .Loop1:
+  1120 0000069D 8A06                <1>  	mov al, BYTE [rsi]
+  1121 0000069F 8A1F                <1>  	mov bl, BYTE [rdi]
+  1122                              <1> 
+  1123 000006A1 3C00                <1>  	cmp al, 0					; end of string
+  1124 000006A3 7410                <1>  	je  .Done
+  1125                              <1> 
+  1126 000006A5 38D8                <1> 	cmp al, bl
+  1127 000006A7 7508                <1>  	jne .Not_the_same
+  1128                              <1> 
+  1129 000006A9 48FFC6              <1>  	inc rsi
+  1130 000006AC 48FFC7              <1>  	inc rdi
+  1131 000006AF EBEC                <1>  	jmp .Loop1
+  1132                              <1> 
+  1133                              <1>  .Not_the_same:
+  1134 000006B1 B001                <1>  	mov al, 1					; return code for strings are different
+  1135 000006B3 EB02                <1> 	jmp .Exit
+  1136                              <1> 
+  1137                              <1>  .Done:
+  1138 000006B5 30C0                <1>  	xor al,al					; return code for strings are equal
+  1139                              <1> .Exit:
+  1140 000006B7 5E                  <1>  	pop rsi
+  1141 000006B8 5F                  <1>  	pop rdi
+  1142 000006B9 5B                  <1>  	pop rbx
+  1143 000006BA C3                  <1>  ret
+  1144                              <1> 
+  1145                              <1> 
+  1146                              <1> ;******************************************************************************
+  1147                              <1> ;	str_cmp_ctr
+  1148                              <1> ;		- compares two strings for a specified number of characters, if they are
+  1149                              <1> ;		  the same; returns 0 othrwise, return 1.
+  1150                              <1> ;	param/		RSI = pointer to source string
+  1151                              <1> ;	param/		RDI = pointer to destination string
+  1152                              <1> ;	param/		ECX = number of characters to check
+  1153                              <1> ;	returns/	EAX = 0 strings are the same, 1 strings are different
+  1154                              <1> ;******************************************************************************
+  1155                              <1> str_cmp_ctr:
+  1156 000006BB 53                  <1>  	push rbx
+  1157 000006BC 51                  <1>  	push rcx
+  1158 000006BD 57                  <1>  	push rdi
+  1159 000006BE 56                  <1>  	push rsi
+  1160                              <1> 
+  1161                              <1> .Loop1:
+  1162 000006BF 8A06                <1>  	mov al, BYTE [rsi]
+  1163 000006C1 8A1F                <1>  	mov bl, BYTE [rdi]
+  1164                              <1> 
+  1165 000006C3 38D8                <1>  	cmp al, bl
+  1166 000006C5 750F                <1>  	jne .Not_the_same
+  1167                              <1> 
+  1168 000006C7 48FFC6              <1>  	inc rsi
+  1169 000006CA 48FFC7              <1>  	inc rdi
+  1170 000006CD E2F0                <1>  	loop .Loop1
+  1171                              <1> 
+  1172 000006CF B800000000          <1>  	mov eax, 0					; return match found code
+  1173 000006D4 EB05                <1>  	jmp .Done
+  1174                              <1> 
+  1175                              <1>  .Not_the_same:
+  1176 000006D6 B801000000          <1>  	mov eax, 1					; return NO match found code
+  1177                              <1> 
+  1178                              <1>  .Done:
+  1179 000006DB 5E                  <1>  	pop rsi
+  1180 000006DC 5F                  <1>  	pop rdi
+  1181 000006DD 59                  <1>  	pop rcx
+  1182 000006DE 5B                  <1>  	pop rbx
+  1183 000006DF C3                  <1>  ret
+  1184                              <1> 
+  1185                              <1> 
+  1186                              <1> ;******************************************************************************
+  1187                              <1> ;	str_cmp_nocase
+  1188                              <1> ;		- Same as str_cmp, except this is case insensitive. It will compare
+  1189                              <1> ;		  two strings, if they are the same, regardless of upper or lower case
+  1190                              <1> ;		  letters. The Source string (RSI) MUST be zero terminated. The
+  1191                              <1> ;		  destination string (RDI) doesn't matter if terminated or not.
+  1192                              <1> ;		  returns 0 othrwise, return 1.
+  1193                              <1> ;	param/		RSI = pointer to source string
+  1194                              <1> ;	param/		RDI = pointer to destination string
+  1195                              <1> ;	returns/	 AL = 0 strings are the same, 1 strings are different
+  1196                              <1> ;******************************************************************************
+  1197                              <1> str_cmp_nocase:
+  1198 000006E0 53                  <1>     push rbx
+  1199 000006E1 57                  <1>     push rdi
+  1200 000006E2 56                  <1>     push rsi
+  1201                              <1> 
+  1202                              <1>  .Loop1:
+  1203 000006E3 8A07                <1>     mov al, BYTE [rdi]
+  1204 000006E5 E8BB010000          <1> 	call str_upper_ch
+  1205 000006EA 88C3                <1> 	mov bl,al
+  1206 000006EC 8A06                <1> 	mov al, BYTE [rsi]
+  1207 000006EE E8B2010000          <1> 	call str_upper_ch
+  1208                              <1> 
+  1209 000006F3 3C00                <1>     cmp al, 0					; end of string
+  1210 000006F5 7410                <1>     je  .Done
+  1211                              <1> 
+  1212 000006F7 38D8                <1>     cmp al, bl
+  1213 000006F9 7508                <1>     jne .Not_the_same
+  1214                              <1> 
+  1215 000006FB 48FFC6              <1>     inc rsi
+  1216 000006FE 48FFC7              <1>     inc rdi
+  1217 00000701 EBE0                <1>     jmp .Loop1
+  1218                              <1> 
+  1219                              <1>  .Not_the_same:
+  1220 00000703 B001                <1>     mov al, 1					; return code for strings are different
+  1221 00000705 EB02                <1>     jmp .Exit
+  1222                              <1> 
+  1223                              <1>  .Done:
+  1224 00000707 30C0                <1>     xor al,al					; return code for strings are equal
+  1225                              <1>  .Exit:
+  1226 00000709 5E                  <1>     pop rsi
+  1227 0000070A 5F                  <1>     pop rdi
+  1228 0000070B 5B                  <1>     pop rbx
+  1229 0000070C C3                  <1>  ret
+  1230                              <1> 
+  1231                              <1> 
+  1232                              <1> ;******************************************************************************
+  1233                              <1> ;	str_cpy
+  1234                              <1> ;		- copies a string from one memory location to another, terminates at
+  1235                              <1> ;		  NULL (0).
+  1236                              <1> ;	param/		RSI = address pointer to source
+  1237                              <1> ;	param/		RDI = address pointer to destination
+  1238                              <1> ;******************************************************************************
+  1239                              <1> str_cpy:
+  1240 0000070D 50                  <1> 	push rax
+  1241 0000070E 31C0                <1> 	xor  eax, eax
+  1242                              <1> 
+  1243                              <1> .Loop1:
+  1244 00000710 678A06              <1> 	mov al, BYTE [esi]
+  1245 00000713 678807              <1> 	mov [edi], al
+  1246 00000716 FFC6                <1> 	inc esi
+  1247 00000718 FFC7                <1> 	inc edi
+  1248 0000071A 3C00                <1> 	cmp byte al, 0				; check for NULL
+  1249 0000071C 75F2                <1> 	jne .Loop1
+  1250                              <1> 
+  1251                              <1> .Done:
+  1252 0000071E 58                  <1> 	pop  rax
+  1253 0000071F C3                  <1> ret
+  1254                              <1> 
+  1255                              <1> 
+  1256                              <1> ;******************************************************************************
+  1257                              <1> ; Basically the same as str_cpy except will terminate on either NULL or a
+  1258                              <1> ; linefeed (0xA).
+  1259                              <1> ;
+  1260                              <1> ; IN:	RSI = address pointer to source
+  1261                              <1> ; 		RDI = address pointer to destination
+  1262                              <1> ;******************************************************************************
+  1263                              <1> str_cpy_line:
+  1264 00000720 50                  <1> 	push rax
+  1265 00000721 4831C0              <1> 	xor  rax, rax
+  1266                              <1> 
+  1267                              <1> .Loop1:
+  1268 00000724 AC                  <1> 	lodsb 						; load AL, inc RSI
+  1269 00000725 AA                  <1> 	stosb 						; store to RDI, inc RDI
+  1270 00000726 3C0A                <1> 	cmp byte al, 0xA 			; check for linefeed
+  1271 00000728 7404                <1> 	je  .Done
+  1272 0000072A 3C00                <1> 	cmp byte al, 0				; check for NULL
+  1273 0000072C 75F6                <1> 	jne .Loop1
+  1274                              <1> 
+  1275                              <1> .Done:
+  1276 0000072E 58                  <1> 	pop  rax
+  1277 0000072F C3                  <1> ret
+  1278                              <1> 
+  1279                              <1> 
+  1280                              <1> ;******************************************************************************
+  1281                              <1> ; Find a phrase within a string for a specified number of character.
+  1282                              <1> ; IN:	RSI = memory pointer to NULL terminated source string
+  1283                              <1> ;		RAX = NULL temrinated string to find
+  1284                              <1> ;		RCX = number of characters to search
+  1285                              <1> ; OUT:	RAX = location of found string. Zero if not found.
+  1286                              <1> ;******************************************************************************
+  1287                              <1> str_fnd_ctr:
+  1288                              <1> 
+  1289                              <1> 
+  1290 00000730 C3                  <1> ret
+  1291                              <1> 
+  1292                              <1> ;******************************************************************************
+  1293                              <1> ; Find and Replace.
+  1294                              <1> ; Looks for characters in a string and replaces them with
+  1295                              <1> ; another set of characters. NOTE: the string must be large enough if the
+  1296                              <1> ; characters to replace with is larger then the characters replaced. That is,
+  1297                              <1> ; RBX > RAX.
+  1298                              <1> ;
+  1299                              <1> ; IN:	RSI = memory pointer to NULL terminated source string
+  1300                              <1> ;		RAX = NULL temrinated string to find
+  1301                              <1> ;		RBX = NULL terminated string to replace with
+  1302                              <1> ; OUT:	RSI = modified NULL terminated string
+  1303                              <1> ;		RAX = -1 if there was no memory for result
+  1304                              <1> ;******************************************************************************
+  1305                              <1> str_fnd_n_rpl:
+  1306 00000731 53                  <1> 	push rbx		; pointer to original string
+  1307 00000732 51                  <1> 	push rcx		; pointer to result string
+  1308 00000733 52                  <1> 	push rdx
+  1309 00000734 57                  <1> 	push rdi
+  1310 00000735 56                  <1> 	push rsi
+  1311 00000736 4150                <1> 	push r8			; string to find
+  1312 00000738 4151                <1> 	push r9			; string to replace with
+  1313 0000073A 4152                <1> 	push r10 		; Result: location of temp mem
+  1314 0000073C 4153                <1> 	push r11 		; size of temp mem
+  1315 0000073E 4154                <1> 	push r12 		; original string
+  1316                              <1> 
+  1317 00000740 50                  <1> 	push rax
+  1318                              <1> 
+  1319                              <1> 	; free up registers
+  1320 00000741 4989C0              <1> 	mov r8,rax
+  1321 00000744 4989D9              <1> 	mov r9,rbx
+  1322 00000747 4989F4              <1> 	mov r12,rsi
+  1323                              <1> 
+  1324                              <1> ; Calculate how much memory to allocate for result.
+  1325 0000074A 4D31DB              <1> 	xor r11,r11
+  1326 0000074D 4C89C0              <1> 	mov rax,r8
+  1327 00000750 E8B5000000          <1> 	call str_len
+  1328 00000755 4889C1              <1> 	mov rcx,rax
+  1329 00000758 4C89C8              <1> 	mov rax,r9
+  1330 0000075B E8AA000000          <1> 	call str_len
+  1331 00000760 4839C8              <1> 	cmp rax,rcx
+  1332 00000763 7606                <1> 	jbe .Allocate_mem	; if replace string is smaller or same size, allocate mem
+  1333                              <1> 	; if larger, then get the difference
+  1334 00000765 4829C8              <1> 	sub rax,rcx
+  1335 00000768 4989C3              <1> 	mov r11,rax
+  1336                              <1> 
+  1337                              <1> ; Allocate temp memory to store result
+  1338                              <1> .Allocate_mem:
+  1339 0000076B 4889F0              <1> 	mov rax,rsi
+  1340 0000076E E897000000          <1> 	call str_len
+  1341 00000773 4901C3              <1> 	add r11,rax 		; save size
+  1342 00000776 BA21020000          <1> 	mov rdx,0x221
+  1343 0000077B CDFF                <1> 	int 0xFF
+  1344 0000077D 80FB00              <1> 	cmp bl,0
+  1345 00000780 757E                <1> 	jnz .Err1
+  1346 00000782 4989C2              <1> 	mov r10,rax			; save temp mem location
+  1347                              <1> 
+  1348                              <1> ; Find and Replace
+  1349 00000785 4889F3              <1> 	mov rbx,rsi			; pointer original string
+  1350 00000788 4C89D1              <1> 	mov rcx,r10			; pointer result string
+  1351 0000078B 4C89C7              <1> 	mov rdi,r8			; string to find
+  1352                              <1> 
+  1353                              <1> 	.Search:
+  1354                              <1> 	; RDI = string to find
+  1355                              <1> 	; RSI = original string
+  1356 0000078E 8A07                <1> 		mov al,[rdi]
+  1357 00000790 3C00                <1> 		cmp al,0		; check if end of string to find
+  1358 00000792 7411                <1> 		jz .Found		; if so, a match was found
+  1359 00000794 803E00              <1> 		cmp byte [rsi],0; check if end of original string
+  1360 00000797 743A                <1> 		je .End
+  1361 00000799 3A06                <1> 		cmp al,[rsi]	; compare string to find with original string
+  1362 0000079B 751D                <1> 		jne .No_match
+  1363 0000079D 48FFC6              <1> 		inc rsi
+  1364 000007A0 48FFC7              <1> 		inc rdi
+  1365 000007A3 EBE9                <1> 		jmp .Search
+  1366                              <1> 
+  1367                              <1> 	.Found:
+  1368                              <1> 		; If match found, replace it in temp mem
+  1369 000007A5 4889F3              <1> 		mov rbx,rsi 	; save pointer to original string
+  1370 000007A8 48FFCB              <1> 		dec rbx
+  1371 000007AB 4C89CE              <1> 		mov rsi,r9		; string to replace with
+  1372                              <1> 
+  1373                              <1> 	.Replace:
+  1374 000007AE AC                  <1> 		lodsb
+  1375 000007AF 3C00                <1> 		cmp al,0
+  1376 000007B1 7412                <1> 		je .Next
+  1377 000007B3 8801                <1> 		mov [rcx],al
+  1378 000007B5 48FFC1              <1> 		inc rcx
+  1379 000007B8 EBF4                <1> 		jmp .Replace
+  1380                              <1> 
+  1381                              <1> 	.No_match:
+  1382 000007BA 4889DE              <1> 		mov rsi,rbx 	; current location of original
+  1383 000007BD 4889CF              <1> 		mov rdi,rcx 	; current location of result
+  1384 000007C0 AC                  <1> 		lodsb
+  1385 000007C1 AA                  <1> 		stosb
+  1386 000007C2 48FFC1              <1> 		inc rcx 		; move result pointer
+  1387                              <1> 
+  1388                              <1> 	.Next:
+  1389 000007C5 4C89C7              <1> 		mov rdi,r8
+  1390 000007C8 48FFC3              <1> 		inc rbx 		; move pointer to original
+  1391 000007CB 4889DE              <1> 		mov rsi,rbx
+  1392 000007CE 803E00              <1> 		cmp byte [rsi],0
+  1393 000007D1 75BB                <1> 		jne .Search
+  1394                              <1> 
+  1395                              <1> 	.End:
+  1396 000007D3 C60100              <1> 		mov byte [rcx],0
+  1397                              <1> 
+  1398                              <1> ; Copy result back to original string.
+  1399 000007D6 4C89D6              <1> 	mov rsi,r10			; result string
+  1400 000007D9 4C89E7              <1> 	mov rdi,r12			; oritinal string
+  1401                              <1> 	.Loop_copy:
+  1402 000007DC AC                  <1> 		lodsb
+  1403 000007DD AA                  <1> 		stosb
+  1404 000007DE 3C00                <1> 		cmp al,0
+  1405 000007E0 75FA                <1> 	jnz .Loop_copy
+  1406                              <1> 
+  1407                              <1> 
+  1408                              <1> .Deallocate_mem:
+  1409 000007E2 4C89D0              <1> 	mov rax,r10
+  1410 000007E5 4C89D9              <1> 	mov rcx,r11
+  1411 000007E8 BA22020000          <1> 	mov rdx,0x222
+  1412 000007ED CDFF                <1> 	int 0xFF
+  1413                              <1> 
+  1414 000007EF 58                  <1> 	pop rax
+  1415                              <1> 
+  1416                              <1> .Done:
+  1417 000007F0 415C                <1> 	pop r12
+  1418 000007F2 415B                <1> 	pop r11
+  1419 000007F4 415A                <1> 	pop r10
+  1420 000007F6 4159                <1> 	pop r9
+  1421 000007F8 4158                <1> 	pop r8
+  1422 000007FA 5E                  <1> 	pop rsi
+  1423 000007FB 5F                  <1> 	pop rdi
+  1424 000007FC 5A                  <1> 	pop rdx
+  1425 000007FD 59                  <1> 	pop rcx
+  1426 000007FE 5B                  <1> 	pop rbx
+  1427 000007FF C3                  <1> ret
+  1428                              <1> .Err1:
+  1429 00000800 58                  <1> 	pop rax
+  1430 00000801 48C7C0FFFFFFFF      <1> 	mov rax,-1
+  1431 00000808 EBE6                <1> 	jmp .Done
+  1432                              <1> 
+  1433                              <1> 
+  1434                              <1> ;******************************************************************************
+  1435                              <1> ;	str_len
+  1436                              <1> ;		- determines the length of a string
+  1437                              <1> ;	param/		RAX = address pointer to string
+  1438                              <1> ;	returns/	RAX = length
+  1439                              <1> ;******************************************************************************
+  1440                              <1> str_len:
+  1441 0000080A 53                  <1> 	push rbx
+  1442 0000080B 51                  <1> 	push rcx
+  1443                              <1> 
+  1444 0000080C 4889C3              <1> 	mov rbx, rax
+  1445 0000080F B900000000          <1> 	mov rcx, 0					; initialize counter
+  1446                              <1> 
+  1447                              <1> .Continue:
+  1448 00000814 803B00              <1> 	cmp byte [rbx], 0			; end of string check
+  1449 00000817 7408                <1> 	je  .Done
+  1450 00000819 48FFC3              <1> 	inc rbx
+  1451 0000081C 48FFC1              <1> 	inc rcx
+  1452 0000081F EBF3                <1> 	jmp .Continue
+  1453                              <1> 
+  1454                              <1> .Done:
+  1455 00000821 4889C8              <1> 	mov rax, rcx
+  1456                              <1> 
+  1457 00000824 59                  <1> 	pop rcx
+  1458 00000825 5B                  <1> 	pop rbx
+  1459 00000826 C3                  <1> ret
+  1460                              <1> 
+  1461                              <1> 
+  1462                              <1> ;******************************************************************************
+  1463                              <1> ; Splits a string into 2 based on a specified character. The routine will
+  1464                              <1> ; search for the first instance of the specified character. It will then
+  1465                              <1> ; return the source memory pointer as well as a second pointer of the same string.
+  1466                              <1> ; It will terminate the strings and remove leading zeros.
+  1467                              <1> ;
+  1468                              <1> ; IN:	RSI = source string
+  1469                              <1> ;		 BL = character to split on
+  1470                              <1> ; OUT:	RSI = memory location for first string; zero terminated, tailing spaces removed
+  1471                              <1> ;		RDI = memory location for second string; zero terminated, leading/trailing spaces removed.
+  1472                              <1> ;		      If match unsucessful, RDI=0.
+  1473                              <1> ;******************************************************************************
+  1474                              <1> str_split:
+  1475 00000827 50                  <1> 	push rax
+  1476 00000828 56                  <1> 	push rsi 						; save starting location
+  1477 00000829 4831FF              <1> 	xor rdi,rdi
+  1478                              <1> 
+  1479                              <1> .Loop1:
+  1480 0000082C 803E00              <1> 	cmp [rsi], byte 0x0				; if reached the end, then exit
+  1481 0000082F 7429                <1> 	jz  .End_of_string
+  1482                              <1> 
+  1483 00000831 3A1E                <1> 	cmp bl, byte [rsi]
+  1484 00000833 7502                <1> 	jne .No_match
+  1485 00000835 EB05                <1> 	jmp .Match_found
+  1486                              <1> 
+  1487                              <1> .No_match:
+  1488 00000837 48FFC6              <1> 	inc rsi
+  1489 0000083A EBF0                <1> 	jmp .Loop1
+  1490                              <1> 
+  1491                              <1> .Match_found:
+  1492 0000083C 4889F7              <1> 	mov rdi, rsi 					; set starting point for second string
+  1493 0000083F 48FFC7              <1> 	inc rdi 						;
+  1494                              <1> 
+  1495                              <1> 	;	remove trailing spaces and set NULL terminator
+  1496 00000842 C60600              <1> 	mov [rsi], byte 0x0 			; replace split char with NULL
+  1497 00000845 4889F0              <1> 	mov rax, rsi
+  1498 00000848 E8EDFDFFFF          <1> 	call str_chomp 					; remove any trailing spaces
+  1499                              <1> 
+  1500                              <1> 	;push rsi 						; save string 1 starting position for now, RSI used in next call
+  1501 0000084D 4889F8              <1> 	mov rax, rdi
+  1502                              <1> 	;mov rsi, rdi
+  1503 00000850 E8E5FDFFFF          <1> 	call str_chomp
+  1504 00000855 4889C7              <1> 	mov rdi, rax
+  1505                              <1> 	;mov rdi, rsi
+  1506                              <1> 
+  1507                              <1> 	;pop rsi
+  1508 00000858 EB03                <1> 	jmp .Done
+  1509                              <1> 
+  1510                              <1> .End_of_string:
+  1511 0000085A 4831FF              <1> 	xor rdi,rdi 				; return zero, not found
+  1512                              <1> 
+  1513                              <1> .Done:
+  1514 0000085D 5E                  <1> 	pop rsi 					; restore starting location
+  1515 0000085E 58                  <1> 	pop rax
+  1516 0000085F C3                  <1> ret
+  1517                              <1> 
+  1518                              <1> 
+  1519                              <1> ;******************************************************************************
+  1520                              <1> ; Same idea as str_split except instead of looking for the character to split
+  1521                              <1> ; on from left to right, this routine goes in the opposite direction; right
+  1522                              <1> ; to left.
+  1523                              <1> ;
+  1524                              <1> ; IN:	RSI = source string
+  1525                              <1> ;		 BL = character to split on
+  1526                              <1> ; OUT:	RSI = memory location for first string; zero terminated, tailing spaces removed
+  1527                              <1> ;		RDI = memory location for second string; zero terminated, leading/trailing spaces removed.
+  1528                              <1> ;		      If match unsucessful, RDI=0.
+  1529                              <1> ;******************************************************************************
+  1530                              <1> str_split_r:
+  1531 00000860 50                  <1> 	push rax
+  1532 00000861 51                  <1> 	push rcx
+  1533 00000862 56                  <1> 	push rsi
+  1534                              <1> 
+  1535 00000863 4889F0              <1> 	mov rax,rsi 				; get length of string
+  1536 00000866 E89FFFFFFF          <1> 	call str_len
+  1537 0000086B 4883F800            <1> 	cmp rax,0
+  1538 0000086F 740E                <1> 	jz .No_match 				; no string to check, exit with RDI=0
+  1539                              <1> 
+  1540 00000871 4889C1              <1> 	mov rcx,rax
+  1541                              <1> .Loop1:
+  1542 00000874 3A1C0E              <1> 	cmp bl, [rsi+rcx]
+  1543 00000877 740B                <1> 	je .Match
+  1544 00000879 E2F9                <1> 	loop .Loop1
+  1545                              <1> 
+  1546                              <1> ; Becuase RCX=0 is not checked in loop above, drops out before that, we
+  1547                              <1> ; need to do one more check.
+  1548 0000087B 3A1E                <1> 	cmp bl, [rsi]
+  1549 0000087D 7405                <1> 	je .Match
+  1550                              <1> 
+  1551                              <1> .No_match:
+  1552 0000087F 4831FF              <1> 	xor rdi,rdi
+  1553 00000882 EB1D                <1> 	jmp .Done
+  1554                              <1> 
+  1555                              <1> .Match:
+  1556 00000884 C6040E00            <1> 	mov byte [rsi+rcx], 0x00	; replace seperator with NULL
+  1557 00000888 48FFC1              <1> 	inc rcx
+  1558 0000088B 4801F1              <1> 	add rcx, rsi
+  1559 0000088E 4889CF              <1> 	mov rdi, rcx
+  1560 00000891 4889F0              <1> 	mov rax, rsi
+  1561 00000894 E8A1FDFFFF          <1> 	call str_chomp 				; remove leading and trailing spaces
+  1562 00000899 4889F8              <1> 	mov rax, rdi
+  1563 0000089C E899FDFFFF          <1> 	call str_chomp
+  1564                              <1> 
+  1565                              <1> .Match_at_char0:
+  1566                              <1> 
+  1567                              <1> 
+  1568                              <1> .Done:
+  1569 000008A1 5E                  <1> 	pop rsi
+  1570 000008A2 59                  <1> 	pop rcx
+  1571 000008A3 58                  <1> 	pop rax
+  1572 000008A4 C3                  <1> ret
+  1573                              <1> 
+  1574                              <1> 
+  1575                              <1> ;******************************************************************************
+  1576                              <1> ;	str_upper_ch
+  1577                              <1> ; 		- Converts a character to upper case
+  1578                              <1> ;
+  1579                              <1> ; 	IN:		AL = character to convert
+  1580                              <1> ; 	OUT:	AL = return character, unchaged if not in a-z range
+  1581                              <1> ;******************************************************************************
+  1582                              <1> str_upper_ch:
+  1583                              <1>    ;	Check if character is in the range of a-z. If not, then return
+  1584                              <1>    ;	character unchanged.
+  1585 000008A5 3C61                <1>    cmp al, 'a'
+  1586 000008A7 7206                <1>    jb .Done
+  1587 000008A9 3C7A                <1>    cmp al, 'z'
+  1588 000008AB 7702                <1>    ja .Done
+  1589 000008AD 2C20                <1>    sub al, 0x20
+  1590                              <1> .Done:
+  1591 000008AF C3                  <1> ret
+  1592                              <1> 
+  1593                              <1> 
+  1594                              <1> ;******************************************************************************
+  1595                              <1> ; Clear TCP signalling header
+  1596                              <1> ; IN:	RCV_BUFF
+  1597                              <1> ; OUT:	---
+  1598                              <1> ;******************************************************************************
+  1599                              <1> tcp_clear_sig:
+  1600                              <1> ;	push rax
+  1601                              <1> ;	push rcx
+  1602                              <1> ;	push rdx
+  1603 000008B0 57                  <1> 	push rdi
+  1604                              <1> 
+  1605                              <1> ;	mov rax,TCP_SIG_HDR_Size
+  1606                              <1> ;	mov rcx,8
+  1607                              <1> ;	xor rdx,rdx
+  1608                              <1> ;	div ecx
+  1609                              <1> ;	mov ecx,eax
+  1610                              <1> 
+  1611                              <1> 	; Clear signalling bytes in NET_BUFF
+  1612                              <1> ;	xor rax,rax
+  1613 000008B1 488B3C25[43000000]  <1> 	mov rdi,[RCV_BUFF]
+  1614                              <1> ;	cld
+  1615                              <1> ;	rep stosq
+  1616                              <1> 
+  1617 000008B9 66C7070000          <1> 	mov word [rdi],0
+  1618                              <1> 
+  1619 000008BE 5F                  <1> 	pop rdi
+  1620                              <1> ;	pop rdx
+  1621                              <1> ;	pop rcx
+  1622                              <1> ;	pop rax
+  1623 000008BF C3                  <1> ret
+  1624                              <1> 
+  1625                              <1> 
+  1626                              <1> ;******************************************************************************
+  1627                              <1> ; Closes a TCP connection.
+  1628                              <1> ; IN:	RCX = connection ID
+  1629                              <1> ; OUT:	RAX = network module response code
+  1630                              <1> ;******************************************************************************
+  1631                              <1> tcp_close:
+  1632 000008C0 52                  <1> 	push rdx
+  1633 000008C1 BA27000000          <1> 	mov rdx,0x27
+  1634 000008C6 CDFF                <1> 	int 0xFF
+  1635 000008C8 5A                  <1> 	pop rdx
+  1636 000008C9 C3                  <1> ret
+  1637                              <1> 
+  1638                              <1> ;******************************************************************************
+  1639                              <1> ; Closes a TCP connection, does not wait for a response.
+  1640                              <1> ; IN:	RCX = connection ID
+  1641                              <1> ; OUT:	RAX = network module response code
+  1642                              <1> ;******************************************************************************
+  1643                              <1> tcp_close_nw:
+  1644 000008CA 52                  <1> 	push rdx
+  1645 000008CB BA26000000          <1> 	mov rdx,0x26
+  1646 000008D0 CDFF                <1> 	int 0xFF
+  1647 000008D2 5A                  <1> 	pop rdx
+  1648 000008D3 C3                  <1> ret
+  1649                              <1> 
+  1650                              <1> ;******************************************************************************
+  1651                              <1> ; Closes a TCP connection using STP.
+  1652                              <1> ; IN:	RCX = connection ID
+  1653                              <1> ; OUT:	RAX = return code
+  1654                              <1> ;******************************************************************************
+  1655                              <1> tcp_close_stp:
+  1656 000008D4 52                  <1> 	push rdx
+  1657 000008D5 56                  <1> 	push rsi
+  1658                              <1> 
+  1659 000008D6 4831C0              <1> 	xor rax,rax					; set 0 bytes to send, this will flag to do a close only
+  1660 000008D9 4831F6              <1> 	xor rsi,rsi
+  1661 000008DC 53                  <1> 	push rbx
+  1662                              <1> 		; set close flag
+  1663 000008DD BB01000000          <1> 		mov rbx,1
+  1664 000008E2 48C1E320            <1> 		shl rbx,32
+  1665 000008E6 4809D8              <1> 		or rax,rbx
+  1666 000008E9 5B                  <1> 	pop rbx
+  1667                              <1> 
+  1668 000008EA BA2F000000          <1> 	mov rdx, 0x2F				; Send TCP data
+  1669 000008EF CDFF                <1> 	int 0xFF
+  1670                              <1> 
+  1671 000008F1 5E                  <1> 	pop rsi
+  1672 000008F2 5A                  <1> 	pop rdx
+  1673 000008F3 C3                  <1> ret
+  1674                              <1> 
+  1675                              <1> ;******************************************************************************
+  1676                              <1> ; Opens a TCP listener port using common variables
+  1677                              <1> ; IN:	PORT
+  1678                              <1> ;		RCV_BUFF
+  1679                              <1> ;		RCV_BUFF_SZ
+  1680                              <1> ; OUT:	RAX = return code; 0=success, refer to NET_RTN_ codes
+  1681                              <1> ;		[CID] = connection ID
+  1682                              <1> ;		RCX   = connection ID
+  1683                              <1> ;******************************************************************************
+  1684                              <1> tcp_listener:
+  1685 000008F4 52                  <1> 	push rdx
+  1686 000008F5 57                  <1> 	push rdi
+  1687                              <1> 
+  1688 000008F6 480FB70425-         <1> 	movzx rax, word [PORT]
+  1688 000008FB [41000000]          <1>
+  1689 000008FF 8B0C25[4B000000]    <1> 	mov ecx,[RCV_BUFF_SZ]
+  1690                              <1> ;	mov rdi,[RCV_BUFF]				; not used anymore
+  1691 00000906 BA30000000          <1> 	mov rdx,0x30
+  1692 0000090B CDFF                <1> 	int 0xFF
+  1693 0000090D 4883F800            <1> 	cmp rax,0
+  1694 00000911 7508                <1> 	jnz .Done
+  1695 00000913 48890C25[39000000]  <1> 	mov [CID],rcx
+  1696                              <1> .Done:
+  1697 0000091B 5F                  <1> 	pop rdi
+  1698 0000091C 5A                  <1> 	pop rdx
+  1699                              <1> 
+  1700 0000091D 4883F800            <1> 	cmp rax,0
+  1701 00000921 0F85B9F7FFFF        <1> 	jnz Error_open_port
+  1702 00000927 C3                  <1> ret
+  1703                              <1> 
+  1704                              <1> 
+  1705                              <1> ;******************************************************************************
+  1706                              <1> ; TCP Send. Sends data through and existing connection.
+  1707                              <1> ; IN:	RCX = connection ID
+  1708                              <1> ;		EAX = send buffer size
+  1709                              <1> ;		RSI = virtual address of send buffer
+  1710                              <1> ; OUT:	RAX = return code
+  1711                              <1> ;******************************************************************************
+  1712                              <1> tcp_send:
+  1713 00000928 52                  <1> 	push rdx
+  1714 00000929 BA28000000          <1> 	mov rdx, 0x28				; Send TCP data
+  1715 0000092E CDFF                <1> 	int 0xFF
+  1716 00000930 5A                  <1> 	pop rdx
+  1717 00000931 C3                  <1> ret
+  1718                              <1> 
+  1719                              <1> ;******************************************************************************
+  1720                              <1> ; TCP Send. Sends data through an existing connection.
+  1721                              <1> ; IN:	RCX = connection ID
+  1722                              <1> ;		EAX = send buffer size
+  1723                              <1> ;		RSI = virtual address of send buffer
+  1724                              <1> ; OUT:	RAX = return code
+  1725                              <1> ;******************************************************************************
+  1726                              <1> tcp_sendq:
+  1727 00000932 52                  <1> 	push rdx
+  1728 00000933 BA2B000000          <1> 	mov rdx, 0x2B				; Send TCP data
+  1729 00000938 CDFF                <1> 	int 0xFF
+  1730 0000093A 5A                  <1> 	pop rdx
+  1731 0000093B C3                  <1> ret
+  1732                              <1> 
+  1733                              <1> ;******************************************************************************
+  1734                              <1> ; TCP Send using the Send TCP Packet program. This spawns a new user program
+  1735                              <1> ; so that the current program doesn't have to wait for a response.
+  1736                              <1> ; Sends data through and existing connection.
+  1737                              <1> ; IN:	RCX = connection ID
+  1738                              <1> ;		EAX = send buffer size & flags
+  1739                              <1> ;		RSI = virtual address of send buffer
+  1740                              <1> ; OUT:	RAX = return code
+  1741                              <1> ;******************************************************************************
+  1742                              <1> tcp_send_stp:
+  1743 0000093C 52                  <1> 	push rdx
+  1744 0000093D BA2F000000          <1> 	mov rdx, 0x2F				; Send TCP data
+  1745 00000942 CDFF                <1> 	int 0xFF
+  1746 00000944 5A                  <1> 	pop rdx
+  1747 00000945 C3                  <1> ret
+  1748                              <1> 
+  1749                              <1> ; This is the same as tcp_send_stp except it signals STP to close the
+  1750                              <1> ; conection when the send is completed.
+  1751                              <1> tcp_send_stp_c:
+  1752 00000946 50                  <1> 	push rax
+  1753 00000947 52                  <1> 	push rdx
+  1754                              <1> 
+  1755 00000948 53                  <1> 	push rbx
+  1756 00000949 BB01000000          <1> 		mov rbx,1
+  1757 0000094E 48C1E320            <1> 		shl rbx,32
+  1758 00000952 4809D8              <1> 		or rax,rbx
+  1759 00000955 5B                  <1> 	pop rbx
+  1760                              <1> 
+  1761 00000956 BA2F000000          <1> 	mov rdx, 0x2F				; Send TCP data
+  1762 0000095B CDFF                <1> 	int 0xFF
+  1763 0000095D 5A                  <1> 	pop rdx
+  1764 0000095E 58                  <1> 	pop rax
+  1765 0000095F C3                  <1> ret
+  1766                              <1> 
+  1767                              <1> ;******************************************************************************
+  1768                              <1> ; Returns number of seconds the system has been running.
+  1769                              <1> ; IN:	---
+  1770                              <1> ; OUT:	RAX = seconds
+  1771                              <1> ;******************************************************************************
+  1772                              <1> uptime_s:
+  1773                              <1> uptime_seconds:
+  1774 00000960 53                  <1> 	push rbx
+  1775 00000961 52                  <1> 	push rdx
+  1776                              <1> 
+  1777 00000962 BA0D000000          <1> 	mov rdx,0x0D
+  1778 00000967 CDFF                <1> 	int 0xFF
+  1779 00000969 BBE8030000          <1> 	mov rbx,1000
+  1780 0000096E 4831D2              <1> 	xor rdx,rdx
+  1781 00000971 48F7F3              <1> 	div rbx
+  1782                              <1> 
+  1783 00000974 5A                  <1> 	pop rdx
+  1784 00000975 5B                  <1> 	pop rbx
+  1785 00000976 C3                  <1> ret
+  1786                              <1> 
+  1787                              <1> ;******************************************************************************
+  1788                              <1> ; Waits for a period of time. This routine will not sit in a busy wait and
+  1789                              <1> ; will switch to another process until the time period expires.
+  1790                              <1> ; IN:	RCX = how long to wait, in milliseconds (i.e. 1000 = 1 sec)
+  1791                              <1> ; OUT:	---
+  1792                              <1> ;******************************************************************************
+  1793                              <1> waitms:
+  1794 00000977 50                  <1> 	push rax
+  1795 00000978 51                  <1> 	push rcx
+  1796 00000979 52                  <1> 	push rdx
+  1797                              <1> 
+  1798                              <1> 	; Get current ms
+  1799 0000097A BA0D000000          <1> 	mov rdx,0xD
+  1800 0000097F CDFF                <1> 	int 0xFF
+  1801                              <1> ;	mov rcx,rax
+  1802 00000981 4801C1              <1> 	add rcx,rax
+  1803                              <1> 	wait_loop:
+  1804 00000984 BA0F000000          <1> 		mov edx, 0xF
+  1805 00000989 CDFF                <1> 		int 0xFF
+  1806 0000098B BA0D000000          <1> 		mov rdx, 0xD
+  1807 00000990 CDFF                <1> 		int 0xFF
+  1808 00000992 4839C8              <1> 		cmp rax,rcx
+  1809 00000995 76ED                <1> 	jbe wait_loop
+  1810                              <1> 
+  1811 00000997 5A                  <1> 	pop rdx
+  1812 00000998 59                  <1> 	pop rcx
+  1813 00000999 58                  <1> 	pop rax
+  1814 0000099A C3                  <1> ret
+  1815                              <1> 
+  1816                              <1> ; Locks process
+  1817                              <1> xl:
+  1818 0000099B 50                  <1> 	push rax
+  1819 0000099C 52                  <1> 	push rdx
+  1820                              <1> 
+  1821 0000099D 66B80100            <1> 	mov ax,1
+  1822 000009A1 BAFFFF0000          <1> 	mov rdx,0xFFFF
+  1823 000009A6 CDFF                <1> 	int 0xFF
+  1824                              <1> 
+  1825 000009A8 5A                  <1> 	pop rdx
+  1826 000009A9 58                  <1> 	pop rax
+  1827 000009AA C3                  <1> ret
+  1828                              <1> 
+  1829                              <1> ; Unlocks process
+  1830                              <1> xul:
+  1831 000009AB 50                  <1> 	push rax
+  1832 000009AC 52                  <1> 	push rdx
+  1833                              <1> 
+  1834 000009AD 66B80000            <1> 	mov ax,0
+  1835 000009B1 BAFFFF0000          <1> 	mov rdx,0xFFFF
+  1836 000009B6 CDFF                <1> 	int 0xFF
+  1837                              <1> 
+  1838 000009B8 5A                  <1> 	pop rdx
+  1839 000009B9 58                  <1> 	pop rax
+  1840 000009BA C3                  <1> ret
+    24                                  
+    25                                  ;***********************************
+    26                                  ;   PROGRAM CODE
+    27                                  ;***********************************
+    28                                  ENTRY:                      ; code start
+    29 000009BB E852F7FFFF              call clrscr                 ; clears the screen
+    30                                  
+    31 000009C0 48BE-                   mov rsi,msg                 ; set parameter with string to print
+    31 000009C2 [0500000000000000] 
+    32 000009CA E8ABFBFFFF              call print_ln               ; prints the line
+    33                                  
+    34                                  ; The Exit routine stops the program. If you do not do this the CPU will
+    35                                  ; continue to the next address in memory and try to execute it. This will
+    36                                  ; cause a memory protection fault or a general protection fault (which
+    37                                  ; would still stop your program). This is the clean way to end your program.
+    38 000009CF E828F7FFFF              call Exit
+    39                                        
