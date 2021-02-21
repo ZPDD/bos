@@ -6,10 +6,10 @@ That first sentence says it all. The intent of this project is; if you were to c
 ## What makes BOS unique:
 BOS is a stripped down, 64bit, pre-emptive multi-tasking OS (and platform) to allow a developers to create applications without having to deal with complexities of an OS or platform you are using. To make it as easy as possible to bring your application (or system) to life. 
 
+- It is built from scratch. No libraries where used. All hardware drivers are written from scratch.
 - It is small; leaving resources for the application. 
 - It is fast; BOS will startup in a few seconds (even from a USB stick). 
 - It is a platform to create purpose specific applications; giving the developer an ability to setup an environment that does what the developer wants without having to lock down an OS or remove un-needed functions from the OS.
-- It is built from scratch. No libraries where used. All hardware drivers are written from scratch.
 - Full transparency, everything is shown.
 - All resources are at the developers disposal.
 
