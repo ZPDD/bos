@@ -9,25 +9,26 @@ BOS is a stripped down, 64bit, pre-emptive multi-tasking OS (and platform) to al
 - It is small; leaving resources for the application. 
 - It is fast; BOS will startup in a few seconds (even from a USB stick). 
 - It is a platform to create purpose specific applications; giving the developer an ability to setup an environment that does what the developer wants without having to lock down an OS or remove un-needed functions from the OS.
+- It is built from scratch. No libraries where used. All hardware drivers are written from scratch.
+- Full transparency, everything is shown.
+- All resources are at the developers disposal.
 
 ## What BOS is not:
 It is not a general purpose OS. It is not meant for people to read emails, browse the Internet, create documents, create presentations, etc. There are other OS' that do this and do this very well. 
 
 BOS is meant to be the base platform for a product or project. BOS would be a great solution for Internet of Things (IoT) as many of those products are meant to develiver very specific tasks. Any solution that is meant to deliver specifics results, BOS would be the platform to use.
 
-- It is built from scratch.
-- Full transparency, everything is shown.
-- All resources are at the developers disposal.
 
+## The Goal
 This project is very new and raw. The intent at this time is to allow people to try out the OS and create new applications and, provide constructive feedback that will be used to improve the OS.
 
 Send feedback and inquiries to zpdd.inc@gmail.com
 
 ## Getting Started
 To get started refer to the following in the documents folder:
-* The BOS Setup guide to get BOS running.
-* The BOS User guide to understand how BOS works.
-* The BOS Programming guide to create user programs.
+* The BOS Setup guide; to get BOS running.
+* The BOS User guide; to understand how BOS works.
+* The BOS Programming; guide to create user programs.
 
 In addition, refer to the sample source code in the source examples folder.
 
