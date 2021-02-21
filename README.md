@@ -24,10 +24,10 @@ This project is very new and raw. The intent at this time is to allow people to 
 Send feedback and inquiries to zpdd.inc@gmail.com
 
 ## Getting Started
-To get started refer to the following documents in the documents folder:
+To get started refer to the following in the documents folder:
 * The BOS Setup guide to get BOS running.
 * The BOS User guide to understand how BOS works.
 * The BOS Programming guide to create user programs.
 
-In addition, refer to the sample programs source code in the source examples folder.
+In addition, refer to the sample source code in the source examples folder.
 
