@@ -13,9 +13,6 @@ BOS is a stripped down, 64 bit, pre-emptive multi-tasking OS to allow developers
 - Full transparency, everything is shown.
 - All resources are at the developers disposal.
 
-And, its made in Canada.
-
-
 
 ## What BOS is not:
 It is not a general purpose OS. It is not meant for people to read emails, browse the Internet, create documents, create presentations, etc. There are other OS' that do this and do this very well. 
@@ -35,4 +32,8 @@ To get started refer to the following in the documents folder:
 * The BOS Programming guide; to create user programs.
 
 In addition, refer to the sample source code in the source examples folder.
+
+
+Made in Canada.\
+![Canadian Flag](./images/canada-96_48.png)
 
