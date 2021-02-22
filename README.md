@@ -23,6 +23,8 @@ BOS is meant to be the base platform for a product or project. BOS would be a gr
 ## The Goal
 This project is very new and raw. The intent at this time is to allow people to try out the OS, create new applications and, provide constructive feedback that will be used to improve the OS.
 
+I will continously be posting sample code, tutorials and updates; check back frequently for changes.
+
 Send feedback and inquiries to zpdd.inc@gmail.com
 
 ## Getting Started
