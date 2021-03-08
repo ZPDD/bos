@@ -12,7 +12,7 @@
 ;
 ; Copyright (c) 2016-2022 David Borsato
 ; Created: Feb 27, 2021 by David Borsato
-; Library Version: 2.0, Mar 7 2021
+; Library Version: 1.0, Mar 7 2021
 ;*******************************************************************************
 
 sha256__BLOCK_SIZE      equ 64      ; 512 bit is 64 bytes
