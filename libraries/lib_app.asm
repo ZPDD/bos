@@ -5,6 +5,7 @@
 ;
 ; Copyright (c) 2016-2020, David Borsato
 ; Created: Nov 7, 2018 by David Borsato
+; Library Version: 2.0, Mar 7 2021
 ;*******************************************************************************
 
 FONT1.FULL.BLOCK 	equ 9608
@@ -64,6 +65,9 @@ Error_handler:
 	inc word [LINE_NO]
 	call print_ln
 
+Stop:
+stop:
+exit:
 Exit:
 	mov rdx,0x0				; stop process
 	int 0xFF
@@ -88,27 +92,51 @@ alloc:
 	jnz Error_no_memory_network
 ret
 
+;******************************************************************************
+;	charToHex
+;		- converts one character to hex
+;	param/		AL=byte to convert
+;	returns/	AL=hex value
+;******************************************************************************
+charToHex:
+	cmp al, 'a'
+	jl  .Skip_a_to_f
+	cmp al, 'f'
+	jg  .Skip_a_to_f
+	sub al, 0x57
+	jmp .Done
+.Skip_a_to_f:
+
+	cmp al, 'A'
+	jl  .Skip_A_to_F
+	cmp al, 'Z'
+	jg  .Skip_A_to_F
+	sub al, 0x37
+	jmp .Done
+.Skip_A_to_F:
+
+	cmp al, '0'
+	jl  .Skip_0_to_9
+	cmp al, '9'
+	jg  .Skip_0_to_9
+	sub al, 0x30
+.Skip_0_to_9:
+
+.Done:
+	ret
+
+
 clrscr:
 clr_scr:
 clear_screen:
-	push rdx
-	mov word [LINE_NO],0x0		; reset line number
-
-	cmp byte [GUI],0
-	jnz .Clear_gui
-
-	mov rdx,0x300
-	int 0xFF
-
-	jmp .Done
-
-.Clear_gui:
 	push rcx
 	push rdx
 	push r8
 	push r9
 	push r10
 	push r11
+
+	mov word [LINE_NO],0x0		; reset line number
 
 	xor r10,r10
 	xor r11,r11
@@ -134,9 +162,6 @@ clear_screen:
 	pop r8
 	pop rdx
 	pop rcx
-
-.Done:
-	pop rdx
 ret
 
 
@@ -561,6 +586,62 @@ hexToString:
 	pop rax
 ret
 
+;******************************************************************************
+;	hexToString_all
+;		Same as hexToString, except this will print all numbers, even leading
+;		zeros.
+;
+;	param/		EAX = hex number
+;	param/		RDI = address pointer to put string
+;******************************************************************************
+hexToString_all:
+	push rdi
+	call hexToString_all_incr
+	pop rdi
+ret
+
+hexToString_all_ebx:
+	push rax
+	mov rax,rbx
+	call hexToString_all
+	pop rax
+ret
+
+hexToString_all_incr:			; this will NOT reset RDI
+	push rax
+	push rbx
+	push rcx
+
+	xor rbx, rbx				; initialize EBX to zeros
+	push rbx 					; push zeros to stack to act as a terminator
+
+	mov ecx,8					; number of characters in EAX
+.Loop1:
+	mov ebx, eax				; create a working copy
+	and ebx, 1111b 				; get the last nibble
+	call hexToChar				; convert to ASCII character
+	push rbx					; save ASCII values on stack
+	shr eax, 4
+	loop .Loop1
+
+.Save_string_to_var:
+	pop rbx
+
+.Loop2:
+	cmp ebx, 0					; terminator found, exit loop
+	je  .Done
+	mov [rdi], bl 				; copy to address pointer
+	inc edi						; move EDI forward
+	pop rbx
+	jmp .Loop2
+
+.Done:
+	mov [rdi], byte 0			; add null terminator
+	pop rcx
+	pop rbx
+	pop rax
+ret
+
 
 inc_line:
 	push rax
@@ -922,9 +1003,10 @@ Print_gui:
 	push rbx
 	push rcx
 	push rdx
+	push rsi
 
 	; Check if end of screen
-	cmp word [LINE_NO],21
+	cmp word [LINE_NO],27
 	jb .Skip_clr_scr
 		call clear_screen
 	.Skip_clr_scr:
@@ -943,6 +1025,7 @@ Print_gui:
 
 	inc word [LINE_NO]
 
+	pop rsi
 	pop rdx
 	pop rcx
 	pop rbx
@@ -1218,10 +1301,10 @@ str_cpy:
 	xor  eax, eax
 
 .Loop1:
-	mov al, BYTE [esi]
-	mov [edi], al
-	inc esi
-	inc edi
+	mov al, BYTE [rsi]
+	mov [rdi], al
+	inc rsi
+	inc rdi
 	cmp byte al, 0				; check for NULL
 	jne .Loop1
 
@@ -1565,6 +1648,57 @@ str_upper_ch:
    ja .Done
    sub al, 0x20
 .Done:
+ret
+
+
+;******************************************************************************
+;	stringToHex
+;		- converts a string to hex number
+;		- max string size is 16.
+;		- max raw hex number is 8 bytes (size of RBX)
+;
+;	IN:		RCX = length of string
+;			RSI = pointer to string
+;	OUT:	RBX = hex number
+;******************************************************************************
+stringToHex:
+	push rax
+	push rdx
+
+	xor rbx, rbx 				; initialize EBX
+	xor rdx, rdx				; initialize EDX
+.Loop1:
+	; * setup loop, get first character
+	; * convert one byte string to numeric value
+	; * calculate number of nibbles, 1 nibble * counter (ECX)
+	; * left shift numeric value X-nibbles
+	; * add to EBX
+	; * Repeat loop
+	lodsb						; load digit in AL, starting with most significant
+	cmp al, 0					; check for end of string
+	je  .Done
+	call charToHex				; convert byte to numeric value
+	push rax					; store EAX
+	dec rcx						; need to subtract 1
+	mov rax, rcx				; move to EAX to calculate number of bits
+	inc rcx						;
+	mov dl, 4
+	mul dl						; calculate number of nibbles to shift left
+	mov rdx, rax				; store result in EDX
+	pop rax						; restore EAX
+	push rcx
+	mov rcx, rdx
+	shl rax, cl					; shift left
+	pop rcx
+	add rbx, rax 				; add result to EBX
+
+	xor rdx, rdx 				; initialize registers for next round
+	xor rax, rax
+	loop .Loop1
+
+.Done:
+	pop rdx
+	pop rax
 ret
 
 
