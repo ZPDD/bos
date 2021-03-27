@@ -15,7 +15,7 @@
 ; Library Version: 1.0, Mar 7 2021
 ;*******************************************************************************
 
-sha256__BLOCK_SIZE      equ 64      ; 512 bit is 64 bytes
+sha256__BLOCK_SIZE      equ 64      ; 512 bits is 64 bytes
 
 ; (first 32 bits of the fractional parts of the square roots of the
 ; first 8 primes 2..19):
@@ -41,23 +41,28 @@ dd 0xa2bfe8a1, 0xa81a664b, 0xc24b8b70, 0xc76c51a3, 0xd192e819, 0xd6990624, 0xf40
 dd 0x19a4c116, 0x1e376c08, 0x2748774c, 0x34b0bcb5, 0x391c0cb3, 0x4ed8aa4a, 0x5b9cca4f, 0x682e6ff3
 dd 0x748f82ee, 0x78a5636f, 0x84c87814, 0x8cc70208, 0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2
 
+align 64
+;FLIP_BYTE_MASK: dd 0x0c0d0e0f, 0x08090a0b, 0x04050607, 0x00010203 ; 00010203_04050607_08090a0b_0c0d0e0f
+FLIP_BYTE_MASK: dd 0x00010203, 0x04050607, 0x08090a0b, 0x0c0d0e0f ; 00010203_04050607_08090a0b_0c0d0e0f
 
 ;*******************************************************************************
 ; Calculates a SHA256 hash.
 ;
+; This is version 2 and uses XMM registers.
+;
 ; IN:   RSI = memory location of string to hash
 ;       RDI = memory location to put hash. MUST be at least 32 bytes.
-;       RAX = total length of string to hash (in bytes)
+;       RAX = Number of blocks to process
 ; OUT:  RDI = updated with a 32 byte hash
 ;*******************************************************************************
-sha256:
+sha256_2:
     push rax
     push rbx
     push rcx
     push rdx
     push rdi
     push rsi
-    push r8         ; string size
+    push r8         ; number of blocks
     push r9         ; memory location to put hash
     push r10        ; running string counter & ch
     push r11        ; current string location & maj
@@ -74,6 +79,10 @@ sha256:
 ; Initialize environment
     xor r10,r10
 
+    shl r8,6        ; convert to bytes
+    jz .Done
+    add r8,r11      ; set end of data
+
     ; Initialize hash values:
     push rsi
         mov rsi,sha256__h0
@@ -83,15 +92,7 @@ sha256:
         rep movsq
     pop rsi
 
-
     .Main_loop:
-        mov rdi, .cur_block
-        mov rsi, r11
-        call sha256_create_block
-        mov r11,rsi
-        cmp al,0
-        jz .Set_hash_val
-
         ; Process 512bit block
 
         ; Initialize working variables to current hash value
@@ -104,99 +105,95 @@ sha256:
         ; https://en.wikipedia.org/wiki/SHA-2:
         ; copy chunk into first 16 words w[0..15] of the message schedule array
         ; NOTE: a 'word' in the Wiki is a DWORD in assembler.
-        mov rsi, .cur_block
+        movdqa xmm8,[FLIP_BYTE_MASK]
+        mov rsi,r11
         mov rdi, .w
-
-        mov rcx,16
-        .Loop_copy_16_words:
-            lodsd
-            bswap eax       ; convert to big-endian
-            stosd
-        loop .Loop_copy_16_words
-
-        ; https://en.wikipedia.org/wiki/SHA-2:
-        ; Extend the first 16 words into the remaining 48 words w[16..63] of
-        ; the message schedule array.
-        mov rcx,16
-        .Loop_extend_w:
-            ; R12 = s0
-            ; R13 = s1
-            ; RSI = w
-
-            ; Calculate s0
-            ; NOTE: rcx is i.
-            ; s0 := (w[i-15] rightrotate  7) xor (w[i-15] rightrotate 18)
-            ;       xor (w[i-15] rightshift  3)
-            mov rbx,4           ; .w is DWORDS
-            mov rax,rcx
-            sub rax,15
-            mul rbx
-            mov rsi,.w
-            add rsi,rax         ; RSI set to w[i-15]
-            mov eax,[rsi]
-            ror eax,7
-            mov ebx,[rsi]
-            ror ebx,18
-            xor eax,ebx
-            mov ebx,[rsi]
-            shr ebx,3
-            xor eax,ebx
-            mov r12d,eax        ; save s0
-
-            ; Calculate s1
-            ; s1 := (w[i- 2] rightrotate 17) xor (w[i- 2] rightrotate 19)
-            ; xor (w[i- 2] rightshift 10)
-            mov rbx,4           ; .w is DWORDS
-            mov rax,rcx
-            sub rax,2
-            mul rbx
-            mov rsi,.w
-            add rsi,rax         ; RSI set to w[i-2]
-            mov eax,[rsi]
-            ror eax,17
-            mov ebx,[rsi]
-            ror ebx,19
-            xor eax,ebx
-            mov ebx,[rsi]
-            shr ebx,10
-            xor eax,ebx
-            mov r13d,eax        ; save s0
-
-            ; w[i] := w[i-16] + s0 + w[i-7] + s1
-            mov rbx,4           ; .w is DWORDS
-            mov rax,rcx
-            sub rax,16
-            mul rbx
-            mov rsi,.w
-            add rsi,rax         ; RSI set to w[i-16]
-            mov r14d,[rsi]      ; temp holder
-            add r14d,r12d       ; + s0
-
-            mov rbx,4           ; .w is DWORDS
-            mov rax,rcx
-            sub rax,7
-            mul rbx
-            mov rsi,.w
-            add rsi,rax         ; RSI set to w[i-7]
-            add r14d,[rsi]      ; + w[i-7]
-            add r14d,r13d       ; + s1
-
-            mov rbx,4           ; .w is DWORDS
-            mov rax,rcx
-            mul rbx
-            mov rsi,.w
-            add rsi,rax         ; RSI set to w[i]
-            mov [rsi],r14d      ; = w[i]
-
-            inc rcx
-        cmp rcx,63
-        jbe .Loop_extend_w
+        mov rcx,64/16
+        .Loop_copy_16_dwords:
+            ; convert to big-endian
+            movdqu xmm0,[rsi]
+            pshufb xmm0,xmm8
+            movdqu [rdi],xmm0
+            add rsi,16
+            add rdi,16
+        loop .Loop_copy_16_dwords
 
         ; Compression function main loop
         push r10        ; R10 & R11 are re-purposed for ch & maj
         push r11
         mov rcx,0
         .Loop_compression:
+            cmp rcx,16*4
+            jb .Skip_expand_w
+            ; https://en.wikipedia.org/wiki/SHA-2:
+            ; Extend the first 16 words into the remaining 48 words w[16..63] of
+            ; the message schedule array.
+
+                ; R12 = s0
+                ; R13 = s1
+                ; RSI = w
+
+                ; Calculate s0
+                ; NOTE: rcx is i.
+                ; s0 := (w[i-15] rightrotate  7) xor (w[i-15] rightrotate 18)
+                ;       xor (w[i-15] rightshift  3)
+                mov rax,rcx
+                sub rax,15*4        ; substract 15 DWORDS
+
+                mov rsi,.w
+                add rsi,rax         ; RSI set to w[i-15]
+                mov eax,[rsi]
+                ror eax,7
+                mov ebx,[rsi]
+                ror ebx,18
+                xor eax,ebx
+                mov ebx,[rsi]
+                shr ebx,3
+                xor eax,ebx
+                mov r12d,eax        ; save s0
+
+                ; Calculate s1
+                ; s1 := (w[i- 2] rightrotate 17) xor (w[i- 2] rightrotate 19)
+                ; xor (w[i- 2] rightshift 10)
+                mov rax,rcx
+                sub rax,2*4         ; substract 2 DWORDS
+
+                mov rsi,.w
+                add rsi,rax         ; RSI set to w[i-2]
+                mov eax,[rsi]
+                ror eax,17
+                mov ebx,[rsi]
+                ror ebx,19
+                xor eax,ebx
+                mov ebx,[rsi]
+                shr ebx,10
+                xor eax,ebx
+                mov r13d,eax        ; save s0
+
+                ; w[i] := w[i-16] + s0 + w[i-7] + s1
+                mov rax,rcx
+                sub rax,16*4        ; subtract 16 DWORDS
+
+                mov rsi,.w
+                add rsi,rax         ; RSI set to w[i-16]
+                mov r14d,[rsi]      ; temp holder
+                add r14d,r12d       ; + s0
+
+                mov rax,rcx
+                sub rax,7*4         ; subtract 7 DWORDS
+
+                mov rsi,.w
+                add rsi,rax         ; RSI set to w[i-7]
+                add r14d,[rsi]      ; + w[i-7]
+                add r14d,r13d       ; + s1
+
+                mov rsi,.w
+                add rsi,rcx
+                mov [rsi],r14d      ; = w[i]
+            .Skip_expand_w:
+
+
+
             ; S1 := (e rightrotate 6) xor (e rightrotate 11) xor (e rightrotate 25)
             ; r13d is S1
                 mov eax,[.e]
@@ -224,14 +221,13 @@ sha256:
                 add r14d,r13d
                 add r14d,r10d
 
-                mov rax,4               ; DWORD
-                mul rcx
                 mov rsi,sha256__k
-                add rsi,rax             ; k[i]
+                add rsi,rcx             ; k[i]
                 add r14d,[rsi]
 
+
                 mov rsi,.w
-                add rsi,rax             ; w[i]
+                add rsi,rcx             ; w[i]
                 add r14d,[rsi]
 
             ; S0 := (a rightrotate 2) xor (a rightrotate 13) xor (a rightrotate 22)
@@ -289,9 +285,334 @@ sha256:
                 add r14d,r15d
                 mov [.a],r14d
 
+            add rcx,4
+        cmp rcx,63*4
+        jbe .Loop_compression
+        pop r11
+        pop r10
 
-            inc rcx
-        cmp rcx,63
+        ; Add the compressed chunk to the current hash value:
+        ; h0 := h0 + a
+            mov eax,[.a]
+            add [.h0],eax
+        ; h1 := h1 + b
+            mov eax,[.b]
+            add [.h1],eax
+        ; h2 := h2 + c
+            mov eax,[.c]
+            add [.h2],eax
+        ; h3 := h3 + d
+            mov eax,[.d]
+            add [.h3],eax
+        ; h4 := h4 + e
+            mov eax,[.e]
+            add [.h4],eax
+        ; h5 := h5 + f
+            mov eax,[.f]
+            add [.h5],eax
+        ; h6 := h6 + g
+            mov eax,[.g]
+            add [.h6],eax
+        ; h7 := h7 + h
+            mov eax,[.h]
+            add [.h7],eax
+
+         add r11,64          ; move to next block
+        cmp r11,r8
+    jne .Main_loop
+
+.Set_hash_val:
+; Produce the final hash value (big-endian):
+; digest := hash := h0 append h1 append h2 append h3 append h4
+;                   append h5 append h6 append h7
+    mov rcx,4           ; move 4 QWORDS
+    mov rsi,.h0
+    mov rdi,r9          ; R9 holds the location to put the final hash.
+    cld
+    rep movsq
+
+.Done:
+    pop r15
+    pop r14
+    pop r13
+    pop r12
+    pop r11
+    pop r10
+    pop r9
+    pop r8
+    pop rsi
+    pop rdi
+    pop rdx
+    pop rcx
+    pop rbx
+    pop rax
+ret
+.cur_block  times sha256__BLOCK_SIZE db 0       ; current block to hash
+.w          times 64 dd 0                       ; message schedule array
+.a          dd 0                                ; working hash values
+.b          dd 0
+.c          dd 0
+.d          dd 0
+.e          dd 0
+.f          dd 0
+.g          dd 0
+.h          dd 0
+.h0         dd 0                                ; hash values h0 .. h7
+.h1         dd 0
+.h2         dd 0
+.h3         dd 0
+.h4         dd 0
+.h5         dd 0
+.h6         dd 0
+.h7         dd 0
+
+
+
+;*******************************************************************************
+; Calculates a SHA256 hash.
+;
+; IN:   RSI = memory location of string to hash
+;       RDI = memory location to put hash. MUST be at least 32 bytes.
+;       RAX = total length of string to hash (in bytes)
+; OUT:  RDI = updated with a 32 byte hash
+;*******************************************************************************
+sha256:
+    push rax
+    push rbx
+    push rcx
+    push rdx
+    push rdi
+    push rsi
+    push r8         ; string size
+    push r9         ; memory location to put hash
+    push r10        ; running string counter & ch
+    push r11        ; current string location & maj
+    push r12        ; s0, S0
+    push r13        ; s1, S1
+    push r14        ; temp1
+    push r15        ; temp2
+
+; Save parameters
+    mov r8,rax
+    mov r9,rdi
+    mov r11,rsi
+
+; Initialize environment
+    xor r10,r10
+
+    ; Initialize hash values:
+    push rsi
+        mov rsi,sha256__h0
+        mov rdi,.h0
+        mov rcx,8/2
+        cld
+        rep movsq
+    pop rsi
+
+    .Main_loop:
+        mov rdi, .cur_block
+        mov rsi, r11
+        call sha256_create_block
+        mov r11,rsi
+        cmp al,0
+        jz .Set_hash_val
+
+        ; Process 512bit block
+
+        ; Initialize working variables to current hash value
+        mov rsi,.h0
+        mov rdi,.a
+        mov rcx,8/2         ; showing 8/2 for clarity, compiler will change to 4
+        cld
+        rep movsq           ; QWORD copy
+
+        ; https://en.wikipedia.org/wiki/SHA-2:
+        ; copy chunk into first 16 words w[0..15] of the message schedule array
+        ; NOTE: a 'word' in the Wiki is a DWORD in assembler.
+        mov rsi, .cur_block
+        mov rdi, .w
+
+        mov rcx,16
+        .Loop_copy_16_words:
+            lodsd
+            bswap eax       ; convert to big-endian
+            stosd
+        loop .Loop_copy_16_words
+
+        ; https://en.wikipedia.org/wiki/SHA-2:
+        ; Extend the first 16 words into the remaining 48 words w[16..63] of
+        ; the message schedule array.
+        ; mov rcx,16
+        mov rcx,16*4
+        .Loop_extend_w:
+            ; R12 = s0
+            ; R13 = s1
+            ; RSI = w
+
+            ; Calculate s0
+            ; NOTE: rcx is i.
+            ; s0 := (w[i-15] rightrotate  7) xor (w[i-15] rightrotate 18)
+            ;       xor (w[i-15] rightshift  3)
+;            mov rbx,4           ; .w is DWORDS
+;            mov rax,rcx
+;            sub rax,15
+;            mul rbx
+            mov rax,rcx
+            sub rax,15*4        ; substract 15 DWORDS
+
+            mov rsi,.w
+            add rsi,rax         ; RSI set to w[i-15]
+            mov eax,[rsi]
+            ror eax,7
+            mov ebx,[rsi]
+            ror ebx,18
+            xor eax,ebx
+            mov ebx,[rsi]
+            shr ebx,3
+            xor eax,ebx
+            mov r12d,eax        ; save s0
+
+            ; Calculate s1
+            ; s1 := (w[i- 2] rightrotate 17) xor (w[i- 2] rightrotate 19)
+            ; xor (w[i- 2] rightshift 10)
+            mov rax,rcx
+            sub rax,2*4         ; substract 2 DWORDS
+
+            mov rsi,.w
+            add rsi,rax         ; RSI set to w[i-2]
+            mov eax,[rsi]
+            ror eax,17
+            mov ebx,[rsi]
+            ror ebx,19
+            xor eax,ebx
+            mov ebx,[rsi]
+            shr ebx,10
+            xor eax,ebx
+            mov r13d,eax        ; save s0
+
+            ; w[i] := w[i-16] + s0 + w[i-7] + s1
+            mov rax,rcx
+            sub rax,16*4        ; subtract 16 DWORDS
+
+            mov rsi,.w
+            add rsi,rax         ; RSI set to w[i-16]
+            mov r14d,[rsi]      ; temp holder
+            add r14d,r12d       ; + s0
+
+            mov rax,rcx
+            sub rax,7*4         ; subtract 7 DWORDS
+
+            mov rsi,.w
+            add rsi,rax         ; RSI set to w[i-7]
+            add r14d,[rsi]      ; + w[i-7]
+            add r14d,r13d       ; + s1
+
+            mov rsi,.w
+            add rsi,rcx
+            mov [rsi],r14d      ; = w[i]
+
+            add rcx,4
+        cmp rcx, 63*4
+        jbe .Loop_extend_w
+
+        ; Compression function main loop
+        push r10        ; R10 & R11 are re-purposed for ch & maj
+        push r11
+        mov rcx,0
+        .Loop_compression:
+            ; S1 := (e rightrotate 6) xor (e rightrotate 11) xor (e rightrotate 25)
+            ; r13d is S1
+                mov eax,[.e]
+                mov r13d,[.e]
+                ror r13d,6
+                mov ebx,eax
+                ror ebx,11
+                xor r13d,ebx
+                mov ebx,eax
+                ror ebx,25
+                xor r13d,ebx
+
+            ; ch := (e and f) xor ((not e) and g)
+            ; r10d is ch
+                mov r10d,[.e]
+                and r10d,[.f]
+                mov eax, [.e]
+                not eax
+                and eax, [.g]
+                xor r10d,eax
+
+            ; temp1 := h + S1 + ch + k[i] + w[i]
+            ; r14d is temp1
+                mov r14d,[.h]
+                add r14d,r13d
+                add r14d,r10d
+
+                mov rsi,sha256__k
+                add rsi,rcx             ; k[i]
+                add r14d,[rsi]
+
+
+                mov rsi,.w
+                add rsi,rcx             ; w[i]
+                add r14d,[rsi]
+
+            ; S0 := (a rightrotate 2) xor (a rightrotate 13) xor (a rightrotate 22)
+            ; r12d is S0
+                mov r12d,[.a]
+                ror r12d,2
+                mov eax,[.a]
+                mov rbx,rax
+                ror ebx,13
+                xor r12d,ebx
+                ror eax,22
+                xor r12d,eax
+
+            ; maj := (a and b) xor (a and c) xor (b and c)
+            ; r11d is maj
+                mov r11d,[.a]
+                mov eax, r11d
+                mov ebx, [.b]       ; eax=a, ebx=b
+                and r11d,ebx        ; (a and b)
+                mov ebx, [.c]       ; eax=a, ebx=c
+                and eax,ebx
+                xor r11d,eax
+                mov eax, [.b]       ; eax=b, ebx=c
+                and eax,ebx
+                xor r11d,eax
+
+            ; temp2 := S0 + maj
+            ; r15d is temp 2
+                mov r15d,r12d
+                add r15d,r11d
+
+            ; h := g
+                mov eax,[.g]
+                mov [.h],eax
+            ; g := f
+                mov eax,[.f]
+                mov [.g],eax
+            ; f := e
+                mov eax,[.e]
+                mov [.f],eax
+            ; e := d + temp1
+                mov eax,[.d]
+                add eax,r14d
+                mov [.e],eax
+            ; d := c
+                mov eax,[.c]
+                mov [.d],eax
+            ; c := b
+                mov eax,[.b]
+                mov [.c],eax
+            ; b := a
+                mov eax,[.a]
+                mov [.b],eax
+            ; a := temp1 + temp2
+                add r14d,r15d
+                mov [.a],r14d
+
+            add rcx,4
+        cmp rcx,63*4
         jbe .Loop_compression
         pop r11
         pop r10
@@ -371,6 +692,82 @@ ret
 
 
 
+; wrapper routine for sha256i_create_block. Takes in a string to hash, this
+; routine will then:
+;   > allocate memory
+;   > create 64 byte blocks based on the size of the string
+;   > returns:
+;       - location of memory allocated
+;       - size of memory allocated
+;       - number of blocks
+;
+; NOTE:
+;   ** It will be up to the programmer to deallocate the memory taken!! **
+;
+; IN:   RSI = memory location of string to hash
+;       RAX = total length of string to hash (in bytes)
+; OUT:  RSI = allocated memory location of blocks
+;       RCX = size of memory allocated
+;       RAX = number of blocks
+sha256_create_blocks:
+    push rdx
+    push rdi
+    push r8     ; total length of string to hash
+    push r10    ; running counter, used in sha256_create_block routine
+    push r11    ; tracks where we are in the string while breaking into blocks
+    push r12    ; allocated memory location
+    push r13    ; size of memory allocated
+    push r14    ; number of blocks
+
+; Save parameters
+    mov r8,rax
+
+; Calculate number of blocks
+    mov rcx,64
+    xor rdx,rdx
+    div rcx
+    inc rax                     ; always add an extra block (accounts for string length < 64)
+    ; mov r14,rax                 ; save number of blocks
+
+; Allocate memory based on number of blocks
+    mov rcx,64
+    mul rcx
+    mov r13,rax                  ; save allocated memory size
+    call alloc_and_init
+    mov r12,rax                  ; save location
+
+; Loop; break up string into blocks
+    mov r11,rsi
+    mov rdi,r12
+    xor r10,r10
+    xor r14,r14
+    ; R8 already set
+    .Loop1:
+        mov rsi, r11
+        call sha256_create_block
+        mov r11,rsi
+        cmp al,0
+        jz .Exit_loop1
+        inc r14
+        add rdi, sha256__BLOCK_SIZE
+    jmp .Loop1
+    .Exit_loop1:
+
+; Return values
+    mov rsi,r12
+    mov rcx,r13
+    mov rax,r14
+
+    pop r14
+    pop r13
+    pop r12
+    pop r11
+    pop r10
+    pop r8
+    pop rdi
+    pop rdx
+ret
+
 ; Create a 512bit block
 ; IN:   RSI = current string location
 ;       RDI = 64 bytes (512 bits) to put the block
@@ -394,13 +791,6 @@ sha256_create_block:
 ; Save block location
     mov r9,rdi
 
-; Clear the working block
-    xor rax,rax
-    mov rcx,sha256__BLOCK_SIZE/8
-    cld
-    rep stosq       ; RDI should already be set
-    mov rdi,r9      ; reset RDI
-
 ; Check if we need to pad the current block.
 ; Check if the size of the string is bigger then a block size. If so, set
 ; the block string to the next 64 bytes. If the current size is smaller,
@@ -422,6 +812,15 @@ sha256_create_block:
 ; append K '0' bits, where K is the minimum number >= 0 such that L + 1 + K + 64bits is a multiple of 512
 ; append L as a 64-bit big-endian integer, making the total post-processed length a multiple of 512 bits
 .Pad_string:
+; Clear the working block
+    xor rax,rax
+    mov rcx,sha256__BLOCK_SIZE/8
+    cld
+    rep stosq       ; RDI should already be set
+    mov rdi,r9      ; reset RDI
+    mov rax,r8
+    sub rax,r10
+
     cmp rax,0
     jz .Skip_cpy
         call sha256_cpymem
@@ -462,16 +861,20 @@ sha256_create_block:
     add rdi, sha256__BLOCK_SIZE-8
     mov rax,r8
     shl rax,3           ; size * 8
-    mov [rdi+7],al
-    mov rax,r8
-    shr rax,5
-    mov rcx,6
-    .Loop_msg_len:
-        mov [rdi+rcx],al
-        shr rax,8
-        dec rcx
-    cmp rcx,0
-    jge .Loop_msg_len
+    bswap rax
+    mov [rdi],rax
+
+
+    ; mov [rdi+7],al
+    ; mov rax,r8
+    ; shr rax,5
+    ; mov rcx,6
+    ; .Loop_msg_len:
+    ;     mov [rdi+rcx],al
+    ;     shr rax,8
+    ;     dec rcx
+    ; cmp rcx,0
+    ; jge .Loop_msg_len
 
     inc r10         ; set to 1 above total size, to trigger return hash value.
 
@@ -522,5 +925,36 @@ sha256_cpymem:
 
 .Done:
     pop rdx
+    pop rax
+ret
+
+; Populates RDI with the hash digest.
+; ** NOTE **
+;   RDI MUST be 64 bytes. This is what will be NULL'd.
+;
+; routine with NULL the space first.
+; IN:   RDI = memory to populate.
+sha256_populate_digest:
+    push rax
+    push rcx
+    push rdi
+    push rsi
+
+    push rdi
+        xor rax,rax
+        mov rcx, 64/8
+        cld
+        rep stosq
+    pop rdi
+
+; Populate Digest
+    mov rcx,4
+    mov rsi,sha256__h0
+    cld
+    rep movsq
+
+    pop rsi
+    pop rdi
+    pop rcx
     pop rax
 ret
