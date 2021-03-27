@@ -120,9 +120,11 @@ call clear_screen
     mov rsi,test_13_a
     call check_results
     call print_hash
-    call exit
+    call exit       ; <<< NOTE: Exits the program
 ; ____ END ____
 
+
+; This will run a series of tests, refer to TESTS section above
 call run_tests
 call exit
 
