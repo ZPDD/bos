@@ -19,7 +19,7 @@ BOS is a stripped down, 64 bit, pre-emptive multi-tasking OS to allow developers
 ## What BOS is not:
 It is not a general purpose OS. It is not meant for people to read emails, browse the Internet, create documents, create presentations, etc. There are other OS' that do this and do this very well. 
 
-BOS is meant to be the base platform for a product or project. BOS would be a great solution for Internet of Things (IoT) as many of those products are meant to develiver very specific tasks. Any solution that is meant to deliver specifics results, BOS would be the platform to use.
+BOS is meant to be the base platform for a product or project. BOS would be a great solution for Internet of Things (IoT) as many of those products are meant to deliver very specific tasks. Any solution that is meant to deliver specifics results, BOS would be the platform to use.
 
 
 ## The Goal
