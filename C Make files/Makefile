@@ -30,8 +30,3 @@ program_loader.o: program_loader.asm
 clean:
 	rm -f *.o
 	rm -f *.app
-
-
-INSTALL_DIR = /media/sf_boss/app
-install:
-	cp $(NAME).app $(INSTALL_DIR)
