@@ -37,6 +37,8 @@ To get started refer to the following in the documents folder:
 
 In addition, refer to the sample source code in the source examples folder.
 
+## Updates
+* Apr 8, 2021: Support for user programs written in C.
 
 Made in Canada.\
 ![Canadian Flag](./images/canada-96_48.png)
