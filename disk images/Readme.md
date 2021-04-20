@@ -1,6 +1,6 @@
 # BOS Disk Image
 
-Download [BOS Image](https://drive.google.com/file/d/1B0UQ2KNdEa6qCy2oG4gUQi4Nw_pnpKOX/view?usp=sharing)
+Download [BOS Image](https://drive.google.com/file/d/1K3HB7QnITErKNynJuwbwLf4k0hRdNxUS/view?usp=sharing)
 
 **NOTE:** After clicking the link above, make sure to click the download icon at the top right.
 
