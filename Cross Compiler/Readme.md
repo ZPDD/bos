@@ -13,12 +13,12 @@ only the cross compiler files.
 * The instructions below are ment to be run from a Linux terminal.
 
 ## Skill Level
-* Given that we are setting up a cross compiler to be used to create programs; the assumption is the person following the steps below has some knowledge of tar, editing text files, Linux directory structures, and programming.
+* Given that we are setting up a cross compiler to be used to create programs; the assumption is the person following the steps below has some knowledge of tar, apt commands, editing text files, Linux directory structures, and programming.
 * These instructions are not meant for end users.
 
 ## Setup
 * Start your Linux desktop and launch a Terminal program.
-* Building the cross compiler was based on the wiki reference material on [OSDEV] (https://wiki.osdev.org/GCC_Cross-Compiler). There are a number of dependency files needed. Use 'sudo apt install <file>' to install the following:
+* Building the cross compiler was based on the wiki reference material on [OSDEV] (https://wiki.osdev.org/GCC_Cross-Compiler). There are a number of dependency files needed. Use **sudo apt install file_name** to install the following:
   * build-essentials
   * build-bison
   * flex
