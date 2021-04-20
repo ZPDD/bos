@@ -13,7 +13,7 @@ only the cross compiler files.
 * The instructions below are ment to be run from a Linux terminal.
 
 ## Skill Level
-* Given that we are setting up a cross compiler to be used to create programs; the assumption is the person following the steps below has some knowledge of tar, Linux, and programming.
+* Given that we are setting up a cross compiler to be used to create programs; the assumption is the person following the steps below has some knowledge of tar, editing text files, Linux directory structures, and programming.
 * These instructions are not meant for end users.
 
 ## Setup
@@ -29,5 +29,11 @@ only the cross compiler files.
   * libcloog-isl-dev
   * libisl-dev
 * Download the cross compiler. It is recommended to put the tar file into your home directory (e.g. /home/david/bcc.tar.gz). To keep it simmple, all of the scripts and Makefiles assume that everything is in the home directory.
-* Uncompress the tar file (tar xcvf bcc.tar.gz).
-* 
+* Uncompress the tar file (tar xvf bcc.tar.gz).
+* Assuming you uncompressed the tar file in your home directory, edit the './bcc/src/build-bcc.sh' script using your favourite text editor (atom, vi, nano, etc.).
+* Change 18; **export HOME_DIR="/home/david/bcc"** to your home directory. Example; **export HOME_DIR="/home/bob/bcc"**
+* *Optional*, change line 22. If you set **STEP=0**, the script will run until it is done. However, it is defaulting to **STEP=1**, this will stop the script at each configure and make command. Doing this allows you to make sure everything is building as expected and to catch any errors. 
+* Run the script **./bcc/src/build-bcc.sh**
+* Done.
+
+## Using BCC
