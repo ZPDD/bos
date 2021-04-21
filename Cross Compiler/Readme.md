@@ -54,5 +54,5 @@ Once the Makefile is done:
 * Type the command **runn load_app.bin** to setup BOS to copy the program to the OS.
 * Noting the IP address, run your favourite broswer and put the IP address of BOS in the address bar.
 * Drag and drop the compilied program **hello.app** (NOTE the APP extension) to the broswer.
-* In BOS, run the program; **runn hello.app**.
+* In BOS, run the program; **run hello.app**.
 * Done.
