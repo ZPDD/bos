@@ -36,7 +36,7 @@ A cross compiler allows a programmer to develop on one platform (the host) and c
 * Assuming you uncompressed the tar file in your home directory, edit the './bcc/src/build-bcc.sh' script using your favourite text editor (atom, vi, nano, etc.).
 * Change line 18; **export HOME_DIR="/home/david/bcc"** to your home directory. Example; **export HOME_DIR="/home/bob/bcc"**
 * *Optional*, change line 22. If you set **STEP=0**, the script will run until it is done. However, it is defaulting to **STEP=1**, this will stop the script at each configure and make command. Doing this allows you to make sure everything is building as expected and to catch any errors. 
-* Run the script **./bcc/src/build-bcc.sh**
+* Run the script **./bcc/src/build-bcc.sh**. This will take approximately 30-40 minutes to complete.
 * Done.
 
 ## Using BCC
