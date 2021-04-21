@@ -8,6 +8,9 @@ After clicking the link above, make sure to click the download icon at the top r
 The disk image is being shared from a Google drive. Google will complain that it is too large to scan for viruses. Rest assured, there are no viruses in this, 
 only the cross compiler files.
 
+## Why Use a Cross Compiler
+A cross compiler allows a programmer to develop on one platform (the host) and compile the code for another platform (the target). Creating a cross compiler allows the environment to be set up specifically for a target and allows for the most flexibility. It will also allow the ability to eventually port other programs to the target system. For further reading and explanation, refer to this [link](https://wiki.osdev.org/Why_do_I_need_a_Cross_Compiler%3F).
+
 ## Requirements
 * At this time, the cross compiler has been setup to run on a Linux desktop based on Unbuntu. I have chosen to use Lubuntu as my Linux desktop as it is a light weight version of Ubuntu.
 * The instructions below are ment to be run from a Linux terminal.
