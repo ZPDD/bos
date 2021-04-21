@@ -1,5 +1,6 @@
 
 #include <stdint.h>
+#include <stdio.h>
 #include "lib_bos.h"
 
 // These are internal to lib_app ONLY. You won't see them in a user program.
@@ -67,6 +68,139 @@ uint16_t get_gui_y_res()
         : "=r" (val)
     );
     return val;
+}
+
+/*
+    GET IP
+        Returns a uint32_t IP address for a specific NIC. Returns 0
+        if no IP was assigned to the NIC.
+
+    IN:     uint8_t nic_num - NIC number, must be between 1-4.
+*/
+uint32_t net_get_nic_ip(int nic_num)
+{
+    int n = nic_num;
+
+    //  Check for a valid NIC number
+    if (n < 1 || n > 4) return 0;
+
+    //  return result
+    switch (n)
+    {
+        case 1:
+            return net_get_nic_ip_num_1();
+        case 2:
+            return net_get_nic_ip_num_2();
+        case 3:
+            return net_get_nic_ip_num_3();
+        case 4:
+            return net_get_nic_ip_num_4();
+    }
+    return 0;
+}
+
+/*
+    These are individual routines to return NICs 1 to 4 IP addresses. In
+    line assembler in C seems a little tricky, it is best to immediately
+    return after an INT call. Otherwise you get weird behaviour.
+*/
+uint32_t net_get_nic_ip_num_1()
+{
+    uint32_t ip;
+    asm (
+        "mov $0x1A,%%edx\n"
+        "int $0xFF\n"
+        : "=a"(ip)
+        :
+    );
+    return ip;
+}
+
+uint32_t net_get_nic_ip_num_2()
+{
+    uint32_t ip;
+    asm (
+        "mov $0x1A,%%edx\n"
+        "int $0xFF\n"
+        : "=b"(ip)
+        :
+    );
+    return ip;
+}
+uint32_t net_get_nic_ip_num_3()
+{
+    uint32_t ip;
+    asm (
+        "mov $0x1A,%%edx\n"
+        "int $0xFF\n"
+        : "=c"(ip)
+        :
+    );
+    return ip;
+}
+uint32_t net_get_nic_ip_num_4()
+{
+    uint32_t ip;
+    asm (
+        "mov $0x1A,%%edx\n"
+        "int $0xFF\n"
+        : "=d"(ip)
+        :
+    );
+    return ip;
+}
+
+
+/*
+    IP NUMBER TO ALPHA
+        Converts a 32bit numeric IP to a character string.
+
+    IN:     IP      - IP address in a 32bit format
+    OUT:    str     - character array to put IP, MUST be at least 16 bytes.
+*/
+void net_ip_ntoa(uint32_t ip, char* str)
+{
+    uint8_t o1,o2,o3,o4;       //  IP octets
+    o1 = ip;
+    o2 = ip>>8;
+    o3 = ip>>16;
+    o4 = ip>>24;
+    sprintf(str,"%d.%d.%d.%d", (int)o1, (int)o2, (int)o3, (int)o4);
+}
+
+int net_tcp_listen(uint16_t port, int buff_len, uint64_t* xid)
+{
+    int rc=0;       //  return code
+
+    // ; IN:	 AX = Port
+    // ;		ECX = size of receive buffer
+    // ;		RDI = receive buffer location
+    // ; OUT:	RAX = return code; 0=success, refer to NET_RTN_ codes
+    // ; 		RCX = connection ID
+    asm volatile (
+        "mov $0x30,%%edx\n"
+        "int $0xFF\n"
+        : "=a"(rc),"=c"(xid)
+        : "a"(port), "c"(buff_len)
+    );
+    return (int)rc;
+}
+
+int net_udp_listen(uint16_t port, uint64_t* xid)
+{
+    int rc=0;
+
+    // ; IN:	 AX = UDP port to listen on
+	// ; OUT:	RAX = return code
+	// ;		RCX = returns an 8 byte XID
+    asm volatile (
+        "xchg %%bx,%%bx\n"
+        "mov $0x15,%%edx\n"
+        "int $0xFF\n"
+        : "=a"(rc),"=c"(xid)
+        : "a"(port)
+    );
+    return (int)rc;
 }
 
 void print(char* str)
