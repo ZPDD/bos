@@ -38,6 +38,8 @@ To get started refer to the following in the documents folder:
 In addition, refer to the sample source code in the source examples folder.
 
 ## Updates
+* Apr 21, 2021: Cross Compiler for BOS (BCC) and a sampe TCP Listener program using BCC.
+* Apr 21, 2021: Updated BOS image to v3.2
 * Apr 8, 2021: Support for user programs written in C.
 
 Made in Canada.\
