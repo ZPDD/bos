@@ -31,7 +31,7 @@ A cross compiler allows a programmer to develop on one platform (the host) and c
   * texinfo
   * libcloog-isl-dev
   * libisl-dev
-* Download the cross compiler. It is recommended to put the tar file into your home directory (e.g. /home/david/bcc.tar.gz). To keep it simmple, all of the scripts and Makefiles assume that everything is in the home directory.
+* Download the cross compiler. It is recommended to put the tar file into your home directory (e.g. /home/david/bcc.tar.gz). To keep it simple, all of the scripts and Makefiles assume that everything is in the home directory.
 * Uncompress the tar file (tar xvf bcc.tar.gz).
 * Assuming you uncompressed the tar file in your home directory, edit the './bcc/src/build-bcc.sh' script using your favourite text editor (atom, vi, nano, etc.).
 * Change line 18; **export HOME_DIR="/home/david/bcc"** to your home directory. Example; **export HOME_DIR="/home/bob/bcc"**
