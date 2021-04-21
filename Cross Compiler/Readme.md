@@ -53,6 +53,6 @@ Once the Makefile is done:
 * Run the BOS virtual machine
 * Type the command **run load_app.bin** to setup BOS to copy the program to the OS.
 * Noting the IP address, run your favourite broswer and put the IP address of BOS in the address bar.
-* Drag and drop the compilied program **hello.app** (NOTE the APP extension) to the broswer.
+* Drag and drop the compilied program **hello.app** into the browser (NOTE the APP extension).
 * In BOS, run the program; **run hello.app**.
 * Done.
