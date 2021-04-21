@@ -21,7 +21,7 @@ A cross compiler allows a programmer to develop on one platform (the host) and c
 
 ## Setup
 * Start your Linux desktop and launch a Terminal program.
-* Building the cross compiler was based on the wiki reference material on [OSDEV] (https://wiki.osdev.org/GCC_Cross-Compiler). There are a number of dependency files needed. Use **sudo apt install file_name** to install the following:
+* Building the cross compiler was based on the wiki reference material on [OSDEV](https://wiki.osdev.org/GCC_Cross-Compiler). There are a number of dependency files needed. Use **sudo apt install file_name** to install the following:
   * build-essentials
   * build-bison
   * flex
@@ -34,9 +34,25 @@ A cross compiler allows a programmer to develop on one platform (the host) and c
 * Download the cross compiler. It is recommended to put the tar file into your home directory (e.g. /home/david/bcc.tar.gz). To keep it simmple, all of the scripts and Makefiles assume that everything is in the home directory.
 * Uncompress the tar file (tar xvf bcc.tar.gz).
 * Assuming you uncompressed the tar file in your home directory, edit the './bcc/src/build-bcc.sh' script using your favourite text editor (atom, vi, nano, etc.).
-* Change 18; **export HOME_DIR="/home/david/bcc"** to your home directory. Example; **export HOME_DIR="/home/bob/bcc"**
+* Change line 18; **export HOME_DIR="/home/david/bcc"** to your home directory. Example; **export HOME_DIR="/home/bob/bcc"**
 * *Optional*, change line 22. If you set **STEP=0**, the script will run until it is done. However, it is defaulting to **STEP=1**, this will stop the script at each configure and make command. Doing this allows you to make sure everything is building as expected and to catch any errors. 
 * Run the script **./bcc/src/build-bcc.sh**
 * Done.
 
 ## Using BCC
+Using the BCC is easy, a Makefile is provided that has a standard setup. In addition, I have provided sample programs you can reference. 
+
+### Makefile
+If you placed the cross compiler in a location that is not in your home directory; you will need to change line 8 **PREFIX = ~/bcc/bos/sysroot/bin** to the location you specified.
+
+## Build and Compile
+Once the Makefile is done:
+* Create your program (e.g. hello.c). 
+* Change line 11 in the Makefile to the name of your program; **NAME = hello**. 
+* In a terminal execute **make** to compile the code
+* Run the BOS virtual machine
+* Type the command **runn load_app.bin** to setup BOS to copy the program to the OS.
+* Noting the IP address, run your favourite broswer and put the IP address of BOS in the address bar.
+* Drag and drop the compilied program **hello.app** (NOTE the APP extension) to the broswer.
+* In BOS, run the program; **runn hello.app**.
+* Done.
