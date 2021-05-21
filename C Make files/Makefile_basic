@@ -20,16 +20,10 @@ GCC = $(PREFIX)/x86_64-bos-gcc
 ASM = $(PREFIX)/x86_64-bos-as
 
 $(NAME): $(NAME).o lib_bos.o lib_speaker.o lib_sb16.o
-	$(GCC) -T ../c_lib/bos.ld -o $(NAME).app lib_bos.o lib_speaker.o lib_sb16.o $(NAME).o -lgcc
+	$(GCC) -T ../c_lib/bos.ld -o $(NAME).app lib_bos.o $(NAME).o -lgcc
 
 $(NAME).o: $(NAME).c
 	$(GCC) -c $(NAME).c -o $(NAME).o -Wall -Wextra
-
-lib_sb16.o: $(LIB)/lib_sb16.c
-	$(GCC) -c $(LIB)/lib_sb16.c -o lib_sb16.o -Wall -Wextra
-
-lib_speaker.o: $(LIB)/lib_speaker.c
-	$(GCC) -c $(LIB)/lib_speaker.c -o lib_speaker.o -Wall -Wextra
 
 lib_bos.o: $(LIB)/lib_bos.c
 	$(GCC) -c $(LIB)/lib_bos.c -o lib_bos.o -Wall -Wextra
@@ -41,15 +35,4 @@ clean:
 	rm -f *.o
 	rm -f *.app
 
-INSTALL_DIR = /media/sf_boss/app
-install:
-	cp $(NAME).app $(INSTALL_DIR)
 
-INST3_DIR = /media/hd3/app
-inst3:
-	sudo mount -t auto -o rw /dev/sdb1 /media/hd3 && echo Mounted HD3
-	sudo cp $(NAME).app $(INST3_DIR) && sync
-	sudo umount /media/hd3
-
-umnt:
-	sudo umount /media/hd3
