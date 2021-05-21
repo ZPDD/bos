@@ -1,0 +1,55 @@
+# Standard Makefile for a BOS application using the BOS cross compiler
+# and toolchain.
+# Copyright (c) 2016-2022 David Borsato
+# Created: Mar 31, 2021 by David Borsato
+
+
+# Change this to the location where the cross compiler was placed.
+PREFIX = ~/bcc/bos/sysroot/bin
+
+# Change this to the name of your application.
+NAME = s
+
+# Optional: Change this to the shared files folder for BOS.
+LIB = ../c_lib
+
+#########################################################################
+# The rest can be left as is. Change it if you know what you are doing. #
+#########################################################################
+GCC = $(PREFIX)/x86_64-bos-gcc
+ASM = $(PREFIX)/x86_64-bos-as
+
+$(NAME): $(NAME).o lib_bos.o lib_speaker.o lib_sb16.o
+	$(GCC) -T ../c_lib/bos.ld -o $(NAME).app lib_bos.o lib_speaker.o lib_sb16.o $(NAME).o -lgcc
+
+$(NAME).o: $(NAME).c
+	$(GCC) -c $(NAME).c -o $(NAME).o -Wall -Wextra
+
+lib_sb16.o: $(LIB)/lib_sb16.c
+	$(GCC) -c $(LIB)/lib_sb16.c -o lib_sb16.o -Wall -Wextra
+
+lib_speaker.o: $(LIB)/lib_speaker.c
+	$(GCC) -c $(LIB)/lib_speaker.c -o lib_speaker.o -Wall -Wextra
+
+lib_bos.o: $(LIB)/lib_bos.c
+	$(GCC) -c $(LIB)/lib_bos.c -o lib_bos.o -Wall -Wextra
+
+# lib_ipc.o: $(LIB)/lib_ipc.asm
+# 	nasm -f elf64 $(LIB)/lib_ipc.asm -o lib_ipc.o
+
+clean:
+	rm -f *.o
+	rm -f *.app
+
+INSTALL_DIR = /media/sf_boss/app
+install:
+	cp $(NAME).app $(INSTALL_DIR)
+
+INST3_DIR = /media/hd3/app
+inst3:
+	sudo mount -t auto -o rw /dev/sdb1 /media/hd3 && echo Mounted HD3
+	sudo cp $(NAME).app $(INST3_DIR) && sync
+	sudo umount /media/hd3
+
+umnt:
+	sudo umount /media/hd3
