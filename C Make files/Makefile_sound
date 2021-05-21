@@ -41,15 +41,3 @@ clean:
 	rm -f *.o
 	rm -f *.app
 
-INSTALL_DIR = /media/sf_boss/app
-install:
-	cp $(NAME).app $(INSTALL_DIR)
-
-INST3_DIR = /media/hd3/app
-inst3:
-	sudo mount -t auto -o rw /dev/sdb1 /media/hd3 && echo Mounted HD3
-	sudo cp $(NAME).app $(INST3_DIR) && sync
-	sudo umount /media/hd3
-
-umnt:
-	sudo umount /media/hd3
