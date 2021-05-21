@@ -42,6 +42,7 @@ In addition, refer to the sample source code in the source examples folder.
   * Added new C libraries; sound blaster 16, PC speaker
   * Updated current libraries; lib_bos
   * Updated Makefiles and provided examples
+  * QEMU; added a script file to run BOS within QEMU
 * Apr 21, 2021: Cross Compiler for BOS (BCC) and a sampe TCP Listener program using BCC.
 * Apr 21, 2021: Updated BOS image to v3.2
 * Apr 8, 2021: Support for user programs written in C.
