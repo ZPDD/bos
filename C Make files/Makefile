@@ -1,32 +1,55 @@
-# Makefile for a BOS application that will use standard 'gcc' and 'as' on Linux.
-# Note:
-#	You will need 'bos.ld' link file and program_loader.asm to build the
-#	program to be compatible with BOS.
-#
+# Standard Makefile for a BOS application using the BOS cross compiler
+# and toolchain.
 # Copyright (c) 2016-2022 David Borsato
 # Created: Mar 31, 2021 by David Borsato
 
-# Program name, change this as needed.
-NAME = hello
 
+# Change this to the location where the cross compiler was placed.
+PREFIX = ~/bcc/bos/sysroot/bin
 
-# Defining variables for GCC and AS is to prepare for a future BOS specific
-# cross compiler.
-GCC = gcc
-ASM = as
+# Change this to the name of your application.
+NAME = s
 
-$(NAME): $(NAME).o lib_bos.o program_loader.o
-	$(GCC) -T bos.ld -o $(NAME).app -ffreestanding -O2 -nostdlib program_loader.o lib_bos.o $(NAME).o -lgcc
+# Optional: Change this to the shared files folder for BOS.
+LIB = ../c_lib
+
+#########################################################################
+# The rest can be left as is. Change it if you know what you are doing. #
+#########################################################################
+GCC = $(PREFIX)/x86_64-bos-gcc
+ASM = $(PREFIX)/x86_64-bos-as
+
+$(NAME): $(NAME).o lib_bos.o lib_speaker.o lib_sb16.o
+	$(GCC) -T ../c_lib/bos.ld -o $(NAME).app lib_bos.o lib_speaker.o lib_sb16.o $(NAME).o -lgcc
 
 $(NAME).o: $(NAME).c
-	$(GCC) -c $(NAME).c -o $(NAME).o -ffreestanding -Wall -Wextra
+	$(GCC) -c $(NAME).c -o $(NAME).o -Wall -Wextra
 
-lib_bos.o: lib_bos.c
-	$(GCC) -c lib_bos.c -o lib_bos.o -ffreestanding -Wall -Wextra
+lib_sb16.o: $(LIB)/lib_sb16.c
+	$(GCC) -c $(LIB)/lib_sb16.c -o lib_sb16.o -Wall -Wextra
 
-program_loader.o: program_loader.asm
-	$(ASM) program_loader.asm -o program_loader.o
+lib_speaker.o: $(LIB)/lib_speaker.c
+	$(GCC) -c $(LIB)/lib_speaker.c -o lib_speaker.o -Wall -Wextra
+
+lib_bos.o: $(LIB)/lib_bos.c
+	$(GCC) -c $(LIB)/lib_bos.c -o lib_bos.o -Wall -Wextra
+
+# lib_ipc.o: $(LIB)/lib_ipc.asm
+# 	nasm -f elf64 $(LIB)/lib_ipc.asm -o lib_ipc.o
 
 clean:
 	rm -f *.o
 	rm -f *.app
+
+INSTALL_DIR = /media/sf_boss/app
+install:
+	cp $(NAME).app $(INSTALL_DIR)
+
+INST3_DIR = /media/hd3/app
+inst3:
+	sudo mount -t auto -o rw /dev/sdb1 /media/hd3 && echo Mounted HD3
+	sudo cp $(NAME).app $(INST3_DIR) && sync
+	sudo umount /media/hd3
+
+umnt:
+	sudo umount /media/hd3
