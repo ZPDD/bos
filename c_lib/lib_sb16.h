@@ -1,5 +1,5 @@
 /*
-    SOUND LIBRARY
+    SOUND BLASTER 16 LIBRARY
 
     References:
         https://wiki.osdev.org/Sound_Blaster_16
