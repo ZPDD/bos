@@ -1,5 +1,5 @@
 /*
-    SOUND LIBRARY
+    SOUND BLASTER 16 LIBRARY
 
     Apr 25, 2021
 */
