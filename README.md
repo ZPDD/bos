@@ -1,5 +1,5 @@
 # BORSAT OS
-Better Origianl System and Technology
+Better Original System and Technology (BOS)
 
 That first sentence says it all. The intent of this project is: if you were to create a brand new Operating System (OS) from scratch with no code re-use, what would you do to make it better? What would you put in? And just as important, what would you leave out? 
 
