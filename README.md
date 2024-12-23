@@ -3,7 +3,7 @@ Better Original System and Technology (BOS)
 
 That first sentence says it all. The intent of this project is: if you were to create a brand new Operating System (OS) from scratch with no code re-use, what would you do to make it better? What would you put in? And just as important, what would you leave out? 
 
-![BOS Running](./images/BORSAT OS.png)
+![BOS Running](./images/BORSAT_OS.png)
 
 ## What makes BOS unique:
 BOS is a stripped down, 64 bit, pre-emptive multi-tasking OS to allow developers to create applications without having to deal with complexities of an OS or platform you are using. To make it as easy to bring your application or system to life.
