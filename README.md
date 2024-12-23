@@ -5,7 +5,7 @@ That first sentence says it all. The intent of this project is: if you were to c
 
 ![BOS Running](./images/BORSAT_OS.png)
 
-## What makes BOS unique:
+## What makes BORSAT OS unique:
 BOS is a stripped down, 64 bit, pre-emptive multi-tasking OS to allow developers to create applications without having to deal with complexities of an OS or platform you are using. To make it as easy to bring your application or system to life.
 
 - It is built from scratch. No libraries where used. All hardware drivers are written from scratch.
@@ -16,7 +16,7 @@ BOS is a stripped down, 64 bit, pre-emptive multi-tasking OS to allow developers
 - All resources are at the developers disposal.
 
 
-## What BOS is not:
+## What BORSAT OS is not:
 It is not a general purpose OS. It is not meant for people to read emails, browse the Internet, create documents, create presentations, etc. There are other OS' that do this and do this very well. 
 
 BOS is meant to be the base platform for a product or project. BOS would be a great solution for Internet of Things (IoT) as many of those products are meant to deliver very specific tasks. Any solution that is meant to deliver specifics results, BOS would be the platform to use.
