@@ -11,14 +11,16 @@ FONT1.FULL.BLOCK 					equ 9608
 ;*******************************************************************************
 ;*  PROGRAM DATA
 ;*******************************************************************************
-x dw 0
-y dw 0
+x dw 0                      ; X coordinate of ball
+y dw 0                      ; Y coordinate of ball
 direction db 1              ; 1=right, 0=left
-move_rate dw 1
-start_x dw 300
-start_y dw 400
-floor dw 550
-wait_time_ms    dq 5       ; millis to wait
+move_rate dw 1              ; how many pixels to move
+start_x dw 300              ; starting X
+start_y dw 400              ; starting Y
+floor dw 550                ; how far the ball will go
+wait_time_ms    dq 5        ; millis to wait
+PRT_BALLX       equ 10      ; print ball X line number
+PRT_BALLY       equ 11      ; print ball Y line number
 
 ;*******************************************************************************
 ;*  INCLUDED FILES
@@ -26,6 +28,9 @@ wait_time_ms    dq 5       ; millis to wait
 %include "../Apps/lib_app.asm"
 
 
+;*******************************************************************************
+;*  PROGRAM ENTRY
+;*******************************************************************************
 ENTRY:
 add rsp,8               ; clean stack from calling program parameters, pop 8 bytes off the stack
 call gui_init
@@ -114,6 +119,10 @@ ret
 .start_x        db 10
 .str            dw 9608,9608,9608,9608,9608,0       ; print full blocks
 
+
+;*******************************************************************************
+; Use this routine to print the X/Y coordinates of the ball.
+;*******************************************************************************
 print_values:
     push rax 
     push rdi 
@@ -153,8 +162,8 @@ print_values:
     pop rdi 
     pop rsi 
 ret 
-t_x     db 'draw X:',0
-t_y     db 'draw Y:',0
+t_x     db 'Ball1 X:',0
+t_y     db 'Ball1 Y:',0
 t_blank db '     ',0
 var     times 100 db 0
 
