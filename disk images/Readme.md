@@ -1,4 +1,4 @@
-# BOS Disk Image
+# BORSAT OS Disk Image
 
 Two images are provided, a raw flat file (bos.img) and a VirtualBox VHD file (bos.vhd). The raw flat file will work with KVM and QEMU. Use the VHD file with VirtualBox.
 
