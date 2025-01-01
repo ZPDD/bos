@@ -38,7 +38,7 @@ To get started refer to the following in the documents folder:
 In addition, refer to the sample source code in the source examples folder.
 
 ## Updates
-* Dec 25, 2024: OS update, added support for RealTek RTL8139 NIC. 
+* Dec 25, 2024: Updated OS images, added support for RealTek RTL8139 NIC. 
 * May 21, 2021:
   * Added new C libraries; sound blaster 16, PC speaker
   * Updated current libraries; lib_bos
