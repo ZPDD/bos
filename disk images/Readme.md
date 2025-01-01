@@ -8,6 +8,6 @@ Download [BOS.IMG](https://drive.google.com/file/d/17UkE3x5mE_AwrxVRXqTukC3MWnBV
 VHD
 Download [BOS.VHD](https://drive.google.com/file/d/1K3HB7QnITErKNynJuwbwLf4k0hRdNxUS/view?usp=share_link)
 
-**NOTE:** After clicking the link above, make sure to click the download icon at the top right.
+**NOTE:** After clicking the link above, you may need to click the download icon at the top right.
 
-The disk image is being shared from a Google drive. Google will complain that it is too large to scan for viruses. There are no viruses in this, only the OS itself.
+The disk image is being shared from a Google drive. Google may complain that it is too large to scan for viruses. There are no viruses in this, only the OS itself.
