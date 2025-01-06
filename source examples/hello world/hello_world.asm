@@ -26,10 +26,13 @@ msg         db 'Hello World!',0 ; a NULL terminated string to print
 ;   PROGRAM CODE
 ;***********************************
 ENTRY:                      ; code start
+xchg bx,bx
 call clrscr                 ; clears the screen
 
+mov al,10                   ; set parameter, X location
+mov ah,5                    ; set parameter, Y location
 mov rsi,msg                 ; set parameter with string to print
-call print_ln               ; prints the line
+call print_cli_xy           ; prints the line
 
 ; The Exit routine stops the program. If you do not do this the CPU will
 ; continue to the next address in memory and try to execute it. This will
