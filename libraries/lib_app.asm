@@ -25,6 +25,7 @@ GUI_X 			dw 0			; X res
 GUI_Y 			dw 0 			; Y res
 GUI_CH_W		dw 0			; char width
 GUI_CH_H		dw 0			; char height
+GUI_INIT 		db 0			; flag to check if GUI variables are initialized
 LINE_NO 		dw 0			; tracks what line number to print on
 LINE_MAX_TXT	dw 21			; maximum lines in text mode (21 default)
 LINE_MAX_GUI	dw 21			; maximum lines in gui mode (21 default)
@@ -92,6 +93,22 @@ alloc:
 	jnz Error_no_memory_network
 ret
 
+;*******************************************************************************
+; Allocates memory from system. And, initializes it to NULL.
+; IN:	RAX:	memory size, in bytes, to allocate
+; OUT:	 BL:	return code; 0=success, anything else is an error
+;		RAX:	memory address of memory allocated
+;*******************************************************************************
+alloc_and_init:
+	mov [.size],rax
+	call alloc
+	push rcx
+		mov rcx,[.size]
+		call null_ram
+	pop rcx
+ret
+.size 		dq 0
+
 ;******************************************************************************
 ;	charToHex
 ;		- converts one character to hex
@@ -129,12 +146,17 @@ charToHex:
 clrscr:
 clr_scr:
 clear_screen:
+	call gui_init			; check if GUI variables are initialized
+
 	push rcx
 	push rdx
 	push r8
 	push r9
 	push r10
 	push r11
+
+; Check GUI is intialized
+	call gui_init 
 
 	mov word [LINE_NO],0x0		; reset line number
 
@@ -166,25 +188,28 @@ ret
 
 
 ;******************************************************************************
-; Clears one character on the screen. NOTE: This only works in GUI mode.
+; Clears characters on the screen by writing them in black. To clear a 
+; character block, use font code 9608 (full block). 
+;
+; NOTE: This uses print WORD, therfore use word (dw) size characters.
+;
 ; IN:	AL = X
 ;		AH = Y
+;	   RSI = string to print in black
 ;******************************************************************************
-clear_screen_ch:
-cmp byte [GUI],0
-jz .Return
+clear_screen_ch_w:
+	call gui_init			; check if GUI variables are initialized
 
-;;
-;; NOTE: rework this routine to use CH_W & CH_H instead, then draw a small box.
-;;
+	push rcx 
 	push rdx
+
 	mov ecx,0x000000 		; black
-	mov rdx,0x402
+	mov rdx,0x410
 	int 0xFF
+	
 	pop rdx
-.Return:
+	pop rcx 
 ret
-.char 		dw 9608,0
 
 
 ;******************************************************************************
@@ -315,6 +340,8 @@ get_gui_mode:
 		pop rbx
 
 .Done:
+	mov byte [GUI_INIT],1				; set global flag
+
 	pop rdx
 	pop rax
 ret
@@ -327,6 +354,8 @@ ret
 ; OUT:	AX = X coordinate
 ;******************************************************************************
 get_gui_x:
+	call gui_init			; check if GUI variables are initialized
+
 	push rbx
 	push rdx
 	xor rdx,rdx
@@ -346,6 +375,8 @@ ret
 ; OUT:	BX = Y coordinate
 ;******************************************************************************
 get_gui_y:
+	call gui_init			; check if GUI variables are initialized
+
 	push rax
 	xor rax,rax
 	xor rdx,rdx
@@ -421,7 +452,142 @@ ret
 ;	Initialize GUI environment.
 ;******************************************************************************
 gui_init:
+	cmp byte [GUI_INIT],1			; check if GUI variables already populated
+	je .Return 
 	jmp get_gui_mode
+.Return:
+ret 
+
+;******************************************************************************
+; Print global GUI variables.
+; Prints all of the GUI variables. Use this to help debug things.
+;
+; NOTE: THis routine should be run AFTER gui_init. Otherwise, all the values
+;		will be zero.
+;
+; IN: 	GUI Global Variables:
+		; BPP 			dw 0			; bits per pixel
+		; BytesPP			dw 0			; bytes per pixel
+		; CH_NUM 			dw 2			;
+		; GUI				db 0			; GUI mode of system
+		; GUI_X 			dw 0			; X res
+		; GUI_Y 			dw 0 			; Y res
+		; GUI_CH_W		dw 0			; char width
+		; GUI_CH_H		dw 0			; char height
+		; LINE_NO 		dw 0			; tracks what line number to print on
+		; LINE_MAX_TXT	dw 21			; maximum lines in text mode (21 default)
+		; LINE_MAX_GUI	dw 21			; maximum lines in gui mode (21 default)
+		; YPITCH 			dw 0
+		; VID_ADDR		dq 0			; base video memory address
+; OUT:	---
+;******************************************************************************
+gui_print_global_var:
+	push rax 
+	push rcx 
+	push rdi 
+	push rsi 
+	push r8 		; text to print 
+	push r9 		; glabal var to print
+	push r15 		; temp space for converting numbers to strings
+
+; Alloc temp memory
+	mov rax,0x1000			; get a page of memeory 
+	call alloc_and_init 
+	mov rdi,rax 			; save memory location 
+
+; GUI Mode
+	mov r8,.txt_gui_mode
+	movzx r9, byte [GUI]
+	call .prt_ln 
+
+; GUI X Resolution 
+	mov r8,.txt_gui_x_res
+	movzx r9, word [GUI_X]
+	call .prt_ln 
+
+; GUI Y Resolution 
+	mov r8,.txt_gui_y_res
+	movzx r9, word [GUI_Y]
+	call .prt_ln 
+
+; GUI character width 
+	mov r8,.txt_gui_ch_w
+	movzx r9, word [GUI_CH_W]
+	call .prt_ln 
+
+; GUI character height 
+	mov r8,.txt_gui_ch_h
+	movzx r9, word [GUI_CH_H]
+	call .prt_ln 
+
+; BPP
+	mov r8,.txt_bpp
+	movzx r9,word [BPP] 
+	call .prt_ln 
+
+; YPITCH 
+	mov r8,.txt_ypitch
+	movzx r9,word [YPITCH] 
+	call .prt_ln 
+
+; Line number 
+	mov r8,.txt_line_no
+	movzx r9,word [LINE_NO] 
+	call .prt_ln 
+
+; Video Address 
+	mov r8,.txt_video_addr
+	mov r9, qword [VID_ADDR] 
+	call .prt_ln 
+
+; De-alloc memory 
+	mov rax,rdi
+	mov rcx,0x1000 	
+	call dalloc 
+
+	pop r15 
+	pop r9 
+	pop r8 
+	pop rsi 
+	pop rdi 
+	pop rcx 
+	pop rax 
+ret 
+; Prints a line, and then increments var_y to the next line.
+; 	NOTE: Overwrites RAX, RDI, RSI
+;
+; IN:	 R8 = txt to print
+;		 R9 = data value to print (GUI global variable)
+.prt_ln:
+	mov al,[.var_x]
+	mov ah,[.var_y] 
+	mov rsi,r8 
+	call print_cli_xy 
+
+	mov rax,r9
+	call intToString 
+
+	mov al,[.var_d]
+	mov ah,[.var_y] 
+	mov rsi,rdi 
+	call print_cli_xy
+
+	inc word [.var_y]
+	mov ax,[.var_y]
+ret 
+.var_x 			dw 0			; X location 
+.var_y 			dw 3 			; Starting Y location
+.var_d 			dw 35 			; X location to put data 
+
+.txt_gui_mode	db 'GUI mode:',0
+.txt_gui_x_res	db 'GUI X resolution:',0
+.txt_gui_y_res	db 'GUI Y resolution:',0
+.txt_gui_ch_w	db 'GUI character width:',0
+.txt_gui_ch_h	db 'GUI character height:',0
+.txt_bpp			db 'Bits per pixel (BPP):',0
+.txt_ypitch		db 'GUI YPITCH:',0
+.txt_line_no		db 'GUI line number to print to:',0
+.txt_video_addr	db 'GUI base video memory Address:',0
 
 
 ;******************************************************************************
@@ -762,7 +928,7 @@ ret
 ;******************************************************************************
 intToString:
 	push rax
-	push rbx
+;	push rbx
 	push rcx
 	push rdx
 	push rdi
@@ -794,7 +960,7 @@ intToString:
 	pop rdi
 	pop rdx
 	pop rcx
-	pop rbx
+;	pop rbx
 	;pop rax
 	add rsp,8			; pop off original value of RAX
 	sub rax, rdi 		; return number of bytes written
@@ -926,6 +1092,8 @@ ret
 ;		RSI = pointer to string location
 ;******************************************************************************
 print_cli_xy:
+	call gui_init			; check if GUI variables are initialized
+
 	push rdx
 	mov rdx,0x400
 	int 0xFF
@@ -937,9 +1105,12 @@ ret
 ; Sames as print_cli_xy, except you can specify a color if in GUI mode.
 ; IN:	 AL = X
 ;		 AH = y
+;		ECX = colour
 ;		RSI = pointer to string location
 ;******************************************************************************
 print_cli_xy_clr:
+	call gui_init			; check if GUI variables are initialized
+
 	push rdx
 	mov rdx,0x402
 	int 0xFF
@@ -960,6 +1131,8 @@ ret
 ; OUT:	RAX = x/y coordinates
 ;******************************************************************************
 print_cli_xy_cw:
+	call print_cli_xy		; check if GUI variables are initialized
+
 	push rdx
 	mov rdx,0x401
 	int 0xFF
@@ -974,6 +1147,8 @@ ret
 ; IN:	LINE_NO = Y coordinate
 ;		RSI = String to print
 print_ln:
+	call gui_init			; check if GUI variables are initialized
+
 	cmp byte [GUI],0
 	jnz Print_gui
 
@@ -999,6 +1174,8 @@ ret
 ; IN:	LINE_NO = Y coordinate
 ;		RSI = null temrinated string
 Print_gui:
+	call gui_init			; check if GUI variables are initialized
+
 	push rax
 	push rbx
 	push rcx
@@ -1076,6 +1253,8 @@ ret
 ;		 AH = Y coordinate
 ;		RSI = null terminated string
 Print_txt:
+	call gui_init			; check if GUI variables are initialized
+
 	push rdx
 	mov rdx,0x305				; print string
 	int 0xFF
