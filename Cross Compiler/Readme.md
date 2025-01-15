@@ -22,7 +22,7 @@ A cross compiler allows a programmer to develop on one platform (the host) and c
 ## Setup
 * Start your Linux desktop and launch a Terminal program.
 * Building the cross compiler was based on the wiki reference material on [OSDEV](https://wiki.osdev.org/GCC_Cross-Compiler). There are a number of dependency files needed. Use **sudo apt install file_name** to install the following:
-  * build-essentials
+  * build-essential
   * build-bison
   * flex
   * libgmp3-dev
