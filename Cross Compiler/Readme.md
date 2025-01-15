@@ -23,13 +23,13 @@ A cross compiler allows a programmer to develop on one platform (the host) and c
 * Start your Linux desktop and launch a Terminal program.
 * Building the cross compiler was based on the wiki reference material on [OSDEV](https://wiki.osdev.org/GCC_Cross-Compiler). There are a number of dependency files needed. Use **sudo apt install file_name** to install the following:
   * build-essential
-  * build-bison
+  * bison
   * flex
   * libgmp3-dev
   * libmpc-dev
   * libmpfr-dev
   * texinfo
-  * libcloog-isl-dev
+  * libcloog-isl-dev (obsolete) 
   * libisl-dev
 * Download the cross compiler. It is recommended to put the tar file into your home directory (e.g. /home/david/bcc.tar.gz). To keep it simple, all of the scripts and Makefiles assume that everything is in the home directory.
 * Uncompress the tar file (tar xvf bcc.tar.gz).
