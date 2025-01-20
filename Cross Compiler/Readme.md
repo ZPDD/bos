@@ -29,8 +29,8 @@ A cross compiler allows a programmer to develop on one platform (the host) and c
   * libmpc-dev
   * libmpfr-dev
   * texinfo
-  * libcloog-isl-dev (obsolete) 
   * libisl-dev
+  * sudo apt install build-essential wget curl git bison flex libgmp-dev libmpc-dev libmpfr-dev texinfo libisl-dev 
 * Download the cross compiler. It is recommended to put the tar file into your home directory (e.g. /home/david/bcc.tar.gz). To keep it simple, all of the scripts and Makefiles assume that everything is in the home directory.
 * Uncompress the tar file (tar xvf bcc.tar.gz).
 * Assuming you uncompressed the tar file in your home directory, edit the './bcc/src/build-bcc.sh' script using your favourite text editor (atom, vi, nano, etc.).
