@@ -2,6 +2,8 @@
 
 Download [BCC](https://drive.google.com/file/d/17_uJJyXbKu9gNRwn4uxPLZb2ykV5z5Le/view?usp=sharing)
 
+Download [BCC2](https://drive.google.com/file/d/14tt_-v8cpiYd0pd5NYnLWOVQHevzFMpg/view?usp=share_link)
+
 **NOTE:** 
 After clicking the link above, make sure to click the download icon at the top right.
 
