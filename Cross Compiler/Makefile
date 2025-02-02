@@ -5,7 +5,7 @@
 
 
 # Change this to the location where the cross compiler was placed.
-PREFIX = ~/bcc/bos/sysroot/bin
+PREFIX = ~/bcc2/bos/sysroot/bin
 
 # Change this to the name of your application.
 NAME = hello
