@@ -34,7 +34,7 @@ A cross compiler allows a programmer to develop on one platform (the host) and c
 * WHen the script is done, go into the **test** directory and run **make**.
 * If all goes weel, then **hello_bos.app** is created.
 
-![Test Make Image](./images/Test_make.png)
+![Test Make Image](https://github.com/ZPDD/BOS/blob/main/images/Test_make.png)
 
 
 ## Using BCC
