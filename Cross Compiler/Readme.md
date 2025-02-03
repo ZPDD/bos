@@ -34,7 +34,7 @@ A cross compiler allows a programmer to develop on one platform (the host) and c
 * Change line 18; **export HOME_DIR="/home/david/bcc2"** to your home directory. Example; **export HOME_DIR="/home/bob/bcc2"**
 * *Optional*, change line 22. If you set **STEP=0**, the script will run until it is done. However, it is defaulting to **STEP=1**, this will stop the script at each step. Doing this allows you to make sure everything is building as expected and to catch any errors. 
 * Run the script **~/bcc2/src/build-bcc.sh**. This will take approximately 30-40 minutes to complete.
-* WHen the script is done, go into the **test** directory and run **make**.
+* When the script is done, change directory to **test** and run **make**.
 * If all goes well, then **hello_bos.app** is created (see image below).
 
 ![Test Make Image](https://github.com/ZPDD/BOS/blob/main/images/Test_make.png)
