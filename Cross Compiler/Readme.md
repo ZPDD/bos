@@ -23,25 +23,16 @@ A cross compiler allows a programmer to develop on one platform (the host) and c
 
 ## Setup
 * Start your Linux desktop and launch a Terminal program.
-* Building the cross compiler was based on the wiki reference material on [OSDEV](https://wiki.osdev.org/GCC_Cross-Compiler). There are a number of dependency files needed. Use **sudo apt install file_name** to install the following:
-  * build-essential
-  * bison
-  * flex
-  * libgmp3-dev
-  * libmpc-dev
-  * libmpfr-dev
-  * texinfo
-  * libisl-dev
-  * sudo apt install build-essential wget curl git bison flex libgmp-dev libmpc-dev libmpfr-dev texinfo libisl-dev autoconf automake
-* Download the cross compiler. It is recommended to put the tar file into your home directory (e.g. /home/david/bcc.tar.gz). To keep it simple, all of the scripts and Makefiles assume that everything is in the home directory.
-* Uncompress the tar file (tar xvf bcc.tar.gz).
-* Assuming you uncompressed the tar file in your home directory, edit the './bcc/src/build-bcc.sh' script using your favourite text editor (atom, vi, nano, etc.).
+* Download bcc2.tar.gz into home directory (/home/david/bcc2.tar.gz) and un-tar it ‘tar -xvf bcc2.tar.gz’
+* Change directory to to ~/bcc2/src
+* Run ‘sudo apt update && sudo apt upgrade’
+* Run script install_apps.sh and reboot. This script will install all of the applications needed to build a cross compiler.
+* Edit the script './bcc/src/build-bcc.sh' script using your favourite text editor (atom, vi, nano, etc.).
 * Change line 18; **export HOME_DIR="/home/david/bcc2"** to your home directory. Example; **export HOME_DIR="/home/bob/bcc2"**
-* *Optional*, change line 22. If you set **STEP=0**, the script will run until it is done. However, it is defaulting to **STEP=1**, this will stop the script at each configure and make command. Doing this allows you to make sure everything is building as expected and to catch any errors. 
-* Run the script **./bcc/src/build-bcc.sh**. This will take approximately 30-40 minutes to complete.
-* Done.
+* *Optional*, change line 22. If you set **STEP=0**, the script will run until it is done. However, it is defaulting to **STEP=1**, this will stop the script at each step. Doing this allows you to make sure everything is building as expected and to catch any errors. 
+* Run the script **~/bcc/src/build-bcc.sh**. This will take approximately 30-40 minutes to complete.
 * WHen the script is done, go into the **test** directory and run **make**.
-* If **hello_bos.app** is created then everything is working.
+* If all goes weel, then **hello_bos.app** is created.
 
 ## Using BCC
 Using the BCC is easy, a Makefile is provided that has a standard setup. In addition, I have provided sample programs you can reference. 
