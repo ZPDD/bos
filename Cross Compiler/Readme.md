@@ -34,6 +34,8 @@ A cross compiler allows a programmer to develop on one platform (the host) and c
 * WHen the script is done, go into the **test** directory and run **make**.
 * If all goes weel, then **hello_bos.app** is created.
 
+![Test_Make](./images/Test_make.png)
+
 ## Using BCC
 Using the BCC is easy, a Makefile is provided that has a standard setup. In addition, I have provided sample programs you can reference. 
 
